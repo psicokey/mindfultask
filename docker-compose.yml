@@ -1,0 +1,11 @@
+services:
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: mindfultask_phpmyadmin
+    environment:
+      # 'host.docker.internal' es un DNS especial que apunta a tu máquina host desde el contenedor
+      PMA_HOST: host.docker.internal
+      PMA_PORT: 3306 # El puerto donde corre tu MariaDB local
+    ports:
+      - "8080:80"
+    restart: always
