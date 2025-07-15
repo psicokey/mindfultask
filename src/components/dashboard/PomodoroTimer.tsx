@@ -1,101 +1,378 @@
+// components/PomodoroTimer.tsx
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSession } from 'next-auth/react'; // Para obtener la sesión del usuario
+
+// Interfaz para los datos de la sesión Pomodoro a enviar a la API
+interface PomodoroSessionData {
+  duration: number; // Duración total en segundos
+  cycles_completed: number;
+  userId: string; // ID del usuario autenticado
+}
 
 export default function PomodoroTimer() {
-  const [minutes, setMinutes] = useState(25);
+  // Estados para la configuración del temporizador
+  const [workTime, setWorkTime] = useState(25); // Tiempo de trabajo en minutos
+  const [breakTime, setBreakTime] = useState(5); // Tiempo de descanso corto en minutos
+  const [longBreakTime, setLongBreakTime] = useState(15); // Tiempo de descanso largo en minutos
+  const [totalCycles, setTotalCycles] = useState(4); // Número de ciclos antes de un descanso largo
+  const [isLongBreakEnabled, setIsLongBreakEnabled] = useState(true); // Habilitar/deshabilitar descanso largo
+
+  // Estados para el temporizador actual
+  const [minutes, setMinutes] = useState(workTime);
   const [seconds, setSeconds] = useState(0);
-  const [isActive, setIsActive] = useState(false);
-  const [mode, setMode] = useState('work'); // 'work' or 'break'
-  const [completedWork, setCompletedWork] = useState(0);
+  const [isActive, setIsActive] = useState(false); // Si el temporizador está corriendo
+  const [mode, setMode] = useState<'work' | 'break' | 'long-break'>('work'); // Modo actual del temporizador
+  const [currentCycle, setCurrentCycle] = useState(0); // Ciclos de trabajo completados
+
+  // Estados para las estadísticas de la sesión
+  const [sessionDuration, setSessionDuration] = useState(0); // Duración total de la sesión en segundos
+
+  // Referencia para el intervalo del temporizador
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Refs para mantener los valores más recientes de minutes y seconds dentro del setInterval
+  const currentMinutesRef = useRef(minutes);
+  const currentSecondsRef = useRef(seconds);
+
+  // Estado para el mensaje de alerta personalizado
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertType, setAlertType] = useState<'success' | 'info' | 'error'>('info');
+
+  // Obtener la sesión del usuario autenticado
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
+
+  // --- Funciones de Utilidad ---
+
+  // Función para reproducir un sonido
+  const playSound = () => {
+    try {
+      const audio = new Audio('sounds/mixkit-alert-quick-chime-766.mp3'); // Asegúrate de tener este archivo en /public/sounds/
+      audio.play().catch(e => console.error("Error al reproducir sonido:", e));
+    } catch (e) {
+      console.error("No se pudo crear el objeto Audio:", e);
+    }
+  };
+
+  // Función para mostrar la alerta personalizada
+  const showCustomAlert = (message: string, type: 'success' | 'info' | 'error' = 'info') => {
+    setAlertMessage(message);
+    setAlertType(type);
+    setShowAlert(true);
+    setTimeout(() => {
+      setShowAlert(false);
+      setAlertMessage('');
+    }, 3000); // La alerta desaparece después de 3 segundos
+  };
+
+  // Función para guardar la sesión Pomodoro en la base de datos
+  const savePomodoroSession = async (data: PomodoroSessionData) => {
+    if (typeof data.duration !== 'number' || typeof data.cycles_completed !== 'number' || data.duration <= 0 || data.cycles_completed <= 0) {
+      showCustomAlert('Datos de sesión inválidos. Por favor, revise la duración y los ciclos completados.', 'error');
+      console.error("Datos de sesión inválidos:", data);
+      return;
+    }
+
+
+
+    if (!userId) {
+      showCustomAlert('No se pudo guardar la sesión: Usuario no autenticado.', 'error');
+      console.error("No se pudo guardar la sesión: userId no disponible.");
+      return;
+    }
+
+    console.log("Enviando datos de sesión a la API:", data);
+    try {
+      const response = await fetch('/api/pomodoro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error del servidor');
+      }
+
+      const result = await response.json();
+      console.log("Sesión guardada con éxito:", result);
+      showCustomAlert(`¡Sesión completada y guardada!\nCiclos: ${data.cycles_completed}\nDuración: ${Math.floor(data.duration / 60)} minutos.`, 'success');
+
+    } catch (error) {
+      console.error("Fallo al guardar la sesión:", error);
+      showCustomAlert(`Hubo un error al guardar la sesión: ${(error as Error).message}`, 'error');
+    }
+  };
+
+  // --- Efectos para Sincronizar Refs con el Estado ---
+  // Estos efectos mantienen los refs actualizados con los últimos valores de los estados
+  useEffect(() => {
+    currentMinutesRef.current = minutes;
+  }, [minutes]);
+
+  useEffect(() => {
+    currentSecondsRef.current = seconds;
+  }, [seconds]);
+
+  // --- Efectos del Temporizador ---
+
+  // Efecto para manejar la cuenta regresiva del temporizador
   useEffect(() => {
     if (isActive) {
       intervalRef.current = setInterval(() => {
-        setSeconds(prevSeconds => {
-          if (prevSeconds === 0) {
-            if (minutes === 0) {
-              // Timer completed
-              clearInterval(intervalRef.current as NodeJS.Timeout);
-              setIsActive(false);
-              
-              if (mode === 'work') {
-                setCompletedWork(prev => prev + 1);
-                // Switch to break after work
-                setMode('break');
-                setMinutes(5);
-                setSeconds(0);
-              } else {
-                // Switch to work after break
-                setMode('work');
-                setMinutes(25);
-                setSeconds(0);
-              }
-              
-              return 0;
-            } else {
-              setMinutes(prevMinutes => prevMinutes - 1);
-              return 59;
-            }
-          } else {
-            return prevSeconds - 1;
+        // Usamos los valores de los refs para acceder al estado más reciente
+        if (currentSecondsRef.current > 0) {
+          setSeconds(prevSeconds => prevSeconds - 1);
+        } else { // currentSecondsRef.current es 0
+          if (currentMinutesRef.current > 0) {
+            setMinutes(prevMinutes => prevMinutes - 1);
+            setSeconds(59); // Reiniciar segundos a 59
+          } else { // currentMinutesRef.current también es 0, el temporizador ha llegado a 00:00
+            setSeconds(0); // Mantener en 00:00, la lógica de cambio de modo/ciclo se maneja en el siguiente useEffect
           }
-        });
+        }
       }, 1000);
     } else if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+      clearInterval(intervalRef.current); // Detener el intervalo si el temporizador está inactivo
     }
 
+    // Función de limpieza para el efecto
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isActive, minutes, mode]);
+  }, [isActive]); // ¡Importante! Ahora solo depende de isActive
+
+  // Efecto para gestionar el cambio de modo (trabajo, descanso, descanso largo) y el fin de la sesión
+  useEffect(() => {
+    // Solo actúa si el temporizador está activo y llega a 00:00
+    if (minutes === 0 && seconds === 0 && isActive) {
+      // Detener el intervalo actual para evitar múltiples ejecuciones
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+
+      playSound(); // Reproducir sonido al cambiar de estado
+
+      if (mode === 'work') {
+        const completedWorkTime = workTime * 60;
+        const newCurrentCycle = currentCycle + 1;
+        const newSessionDuration = sessionDuration + completedWorkTime;
+
+        setCurrentCycle(newCurrentCycle);
+        setSessionDuration(newSessionDuration);
+
+        // Determinar si es un descanso largo o corto
+        if (isLongBreakEnabled && newCurrentCycle % totalCycles === 0) {
+          setMode('long-break');
+          setMinutes(longBreakTime);
+          showCustomAlert('¡Tiempo de Descanso Largo!', 'info');
+        } else {
+          setMode('break');
+          setMinutes(breakTime);
+          showCustomAlert('¡Tiempo de Descanso Corto!', 'info');
+        }
+        setSeconds(0);
+        setIsActive(true); // Continuar con el siguiente temporizador
+      } else if (mode === 'break' || mode === 'long-break') {
+        const completedBreakTime = (mode === 'break' ? breakTime : longBreakTime) * 60;
+        setSessionDuration(sessionDuration + completedBreakTime);
+
+        // Si el ciclo actual ha alcanzado el total de ciclos, la sesión ha terminado
+        if (currentCycle >= totalCycles && isLongBreakEnabled && currentCycle % totalCycles === 0) {
+          setIsActive(false); // Detener el temporizador
+          savePomodoroSession({
+            duration: sessionDuration + completedBreakTime, // Incluir el último descanso
+            cycles_completed: currentCycle,
+            userId: userId || 'unknown', // Usar 'unknown' si userId no está disponible
+          });
+          // Reiniciar para una nueva sesión
+          setCurrentCycle(0);
+          setSessionDuration(0);
+          setMode('work');
+          setMinutes(workTime);
+          setSeconds(0);
+          showCustomAlert('¡Sesión Pomodoro Finalizada!', 'success');
+        } else {
+          // Si no es el final de la sesión, volver al modo de trabajo
+          setMode('work');
+          setMinutes(workTime);
+          setSeconds(0);
+          setIsActive(true); // Continuar con el siguiente temporizador de trabajo
+          showCustomAlert('¡Tiempo de Trabajo!', 'info');
+        }
+      }
+    }
+  }, [minutes, seconds, isActive, mode, currentCycle, totalCycles, workTime, breakTime, longBreakTime, sessionDuration, isLongBreakEnabled, savePomodoroSession, userId]);
+
+
+  // Efecto para inicializar o actualizar el temporizador cuando se cambian los tiempos de configuración
+  // o cuando el temporizador está inactivo.
+  useEffect(() => {
+    if (!isActive) {
+      // Si el modo es 'work', usa workTime. Si es 'break', usa breakTime. Si es 'long-break', usa longBreakTime.
+      const timeToSet = mode === 'work' ? workTime : (mode === 'break' ? breakTime : longBreakTime);
+      setMinutes(timeToSet);
+      setSeconds(0);
+    }
+  }, [workTime, breakTime, longBreakTime, mode, isActive]);
+
+  // --- Funciones de Control del Temporizador ---
 
   const toggleTimer = () => {
     setIsActive(!isActive);
   };
 
-  const resetTimer = () => {
+  const resetSession = () => {
     setIsActive(false);
-    setMinutes(mode === 'work' ? 25 : 5);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setMode('work');
+    setCurrentCycle(0);
+    setSessionDuration(0);
+    setMinutes(workTime); // Reiniciar al workTime configurado
     setSeconds(0);
+    showCustomAlert('Sesión Reiniciada.', 'info');
+  };
+
+  // --- Manejadores de Cambio para Inputs (con validación) ---
+
+  const handleWorkTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setWorkTime(value < 1 ? 1 : value); // Mínimo 1 minuto
+  };
+
+  const handleBreakTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setBreakTime(value < 1 ? 1 : value); // Mínimo 1 minuto
+  };
+
+  const handleLongBreakTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setLongBreakTime(value < 1 ? 1 : value); // Mínimo 1 minuto
+  };
+
+  const handleTotalCyclesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setTotalCycles(value < 1 ? 1 : value); // Mínimo 1 ciclo
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">Pomodoro Timer</h2>
-      <div className="text-center mb-4">
-        <div className="text-4xl font-mono mb-4">
-          {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
+    <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl max-w-md mx-auto font-sans text-gray-900 dark:text-white">
+      {/* Alerta Personalizada */}
+      {showAlert && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-md shadow-lg transition-all duration-300 ease-out transform ${
+          alertType === 'success' ? 'bg-green-500' : alertType === 'error' ? 'bg-red-500' : 'bg-blue-500'
+        } text-white font-semibold`}>
+          {alertMessage}
         </div>
-        <p className="text-lg">
-          {mode === 'work' ? 'Tiempo de trabajo' : 'Descanso'}
-        </p>
+      )}
+
+      <h2 className="text-2xl font-bold text-center mb-2">
+        {mode === 'work' ? '☕ Tiempo de Trabajo' : mode === 'break' ? '🧘‍♀️ Descanso Corto' : '😴 Descanso Largo'}
+      </h2>
+      <div className="text-center my-6">
+        <div className="text-8xl font-mono text-gray-900 dark:text-white">
+          {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+        </div>
       </div>
-      <div className="flex justify-center space-x-4">
+      <div className="flex justify-center space-x-4 mb-6">
         <button
           onClick={toggleTimer}
-          className={`px-4 py-2 rounded-md ${
-            isActive 
-              ? 'bg-red-500 hover:bg-red-600 text-white' 
-              : 'bg-green-500 hover:bg-green-600 text-white'
-          }`}
+          className={`px-8 py-3 rounded-md text-lg font-semibold transition-transform transform hover:scale-105
+            ${isActive ? 'bg-orange-500 hover:bg-orange-600' : 'bg-blue-500 hover:bg-blue-600'}
+            text-white shadow-md`}
         >
           {isActive ? 'Pausa' : 'Inicio'}
         </button>
         <button
-          onClick={resetTimer}
-          className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+          onClick={resetSession}
+          className="px-8 py-3 bg-gray-500 text-white rounded-md font-semibold hover:bg-gray-600 transition-transform transform hover:scale-105 shadow-md"
         >
-          Reiniciar
+          Reiniciar Sesión
         </button>
       </div>
-      <div className="mt-4">
-        <p>Sesiones completadas: {completedWork}</p>
-        <p className="text-sm text-gray-600 mt-2">
-          Consejo: Toma un descanso de 5 minutos después de cada sesión.
-        </p>
+
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 space-y-4">
+        <h3 className="font-bold text-gray-700 dark:text-gray-300 text-center text-lg mb-4">Configuración</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="workTime" className="block text-sm font-medium text-gray-600 dark:text-gray-400">Trabajo (min)</label>
+            <input
+              id="workTime"
+              type="number"
+              value={workTime}
+              onChange={handleWorkTimeChange}
+              className="mt-1 w-full p-2 text-center border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+              disabled={isActive}
+              min="1"
+            />
+          </div>
+          <div>
+            <label htmlFor="breakTime" className="block text-sm font-medium text-gray-600 dark:text-gray-400">Descanso (min)</label>
+            <input
+              id="breakTime"
+              type="number"
+              value={breakTime}
+              onChange={handleBreakTimeChange}
+              className="mt-1 w-full p-2 text-center border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+              disabled={isActive}
+              min="1"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mt-4">
+          <label htmlFor="longBreakEnabled" className="text-sm font-medium text-gray-600 dark:text-gray-400 cursor-pointer">
+            <input
+              id="longBreakEnabled"
+              type="checkbox"
+              checked={isLongBreakEnabled}
+              onChange={(e) => setIsLongBreakEnabled(e.target.checked)}
+              className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
+              disabled={isActive}
+            />
+            Habilitar Descanso Largo
+          </label>
+          {isLongBreakEnabled && (
+            <div className="ml-4">
+              <label htmlFor="longBreakTime" className="block text-sm font-medium text-gray-600 dark:text-gray-400">Descanso Largo (min)</label>
+              <input
+                id="longBreakTime"
+                type="number"
+                value={longBreakTime}
+                onChange={handleLongBreakTimeChange}
+                className="mt-1 w-24 p-2 text-center border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                disabled={isActive}
+                min="1"
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="text-center mt-4">
+          <label htmlFor="totalCycles" className="block text-sm font-medium text-gray-600 dark:text-gray-400">Ciclos por Sesión</label>
+          <input
+            id="totalCycles"
+            type="number"
+            value={totalCycles}
+            onChange={handleTotalCyclesChange}
+            className="mt-1 w-24 p-2 text-center border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+            disabled={isActive}
+            min="1"
+          />
+        </div>
+
+        <div className="text-center bg-gray-50 dark:bg-gray-700 p-3 rounded-lg mt-6 shadow-sm">
+          <h3 className="font-bold text-gray-700 dark:text-gray-300">Estadísticas de la Sesión Actual</h3>
+          <p className="text-gray-600 dark:text-gray-400">Ciclos Completados: <span className="font-mono font-bold">{currentCycle} / {totalCycles}</span></p>
+          <p className="text-gray-600 dark:text-gray-400">Tiempo Total: <span className="font-mono font-bold">{Math.floor(sessionDuration / 60)} minutos</span></p>
+        </div>
       </div>
     </div>
   );

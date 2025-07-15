@@ -12,22 +12,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MindfulTask",
+  title: {
+    default: "MindfulTask",
+    template: "%s | MindfulTask"
+  },
   description: "Task management app with a focus on mindfulness and productivity",
 };
 
-export default function RootLayout({
+export default function AuthLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <main className={`min-h-screen bg-gray-50 ${geistSans.variable} ${geistMono.variable}`}>
+      <div className="container mx-auto px-4 py-8">
         {children}
-      </body>
-    </html>
+      </div>
+    </main>
   );
 }

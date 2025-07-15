@@ -1,74 +1,41 @@
-import { NextResponse } from 'next/server'
-import { db }   from 'app/lib/db'
-import { auth } from 'app/lib/auth'
-
-export async function GET(request: Request) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  try {
-    // Obtener sesiones de hoy
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const sessions = await db.pomodoroSession.findMany({
-      where: {
-        userId: session.user.id,
-        completedAt: {
-          gte: today
-        }
-      },
-      orderBy: {
-        completedAt: 'desc'
-      }
-    })
-
-    // Estadísticas resumidas
-    const totalSessions = sessions.length
-    const totalDuration = sessions.reduce((sum, session) => sum + session.duration, 0)
-    const totalCycles = sessions.reduce((sum, session) => sum + session.cyclesCompleted, 0)
-
-    return NextResponse.json({
-      sessions,
-      stats: {
-        totalSessions,
-        totalMinutes: Math.floor(totalDuration / 60),
-        totalCycles
-      }
-    })
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to fetch pomodoro sessions' },
-      { status: 500 }
-    )
-  }
-}
+// app/api/pomodoro/route.ts
+import { NextResponse } from 'next/server';
+import { db } from 'app/lib/db';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from 'app/app/api/auth/[...nextauth]/route';
 
 export async function POST(request: Request) {
-  const session = await auth()
+  // 1. Obtener la sesión del usuario para asegurar que esté autenticado
+  const session = await getServerSession(authOptions);
+
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ message: 'No autorizado' }, { status: 401 });
   }
 
   try {
-    const body = await request.json()
-    
-    const newSession = await db.pomodoroSession.create({
-      data: {
-        userId: session.user.id,
-        duration: body.duration,
-        cyclesCompleted: body.cyclesCompleted || 1,
-        completedAt: new Date(body.completedAt)
-      }
-    })
+    // 2. Obtener los datos del cuerpo de la solicitud
+    const body = await request.json();
+    const { duration, cycles_completed } = body;
 
-    return NextResponse.json(newSession)
+    // 3. Validar los datos recibidos
+    if (typeof duration !== 'number' || typeof cycles_completed !== 'number' || duration <= 0 || cycles_completed <= 0) {
+      return NextResponse.json({ message: 'Datos inválidos' }, { status: 400 });
+    }
+
+    // 4. Crear el registro en la base de datos, pasando el objeto 'data'
+    const newPomodoroSession = await db.pomodoroSession.create({
+      data: {
+        user_id: parseInt(session.user.id, 10), // El ID de la sesión es string, la BD espera un número
+        duration: Math.round(duration), // Guarda la duración en segundos
+        cycles_completed: cycles_completed,
+      },
+    });
+
+    // 5. Devolver una respuesta exitosa
+    return NextResponse.json(newPomodoroSession, { status: 201 });
+
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to save pomodoro session' },
-      { status: 500 }
-    )
+    console.error("Error al crear la sesión Pomodoro:", error);
+    return NextResponse.json({ message: 'Error interno del servidor' }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 // src/components/dashboard/DashboardHeader.tsx
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -16,7 +16,6 @@ import {
 } from 'react-icons/fa';
 import { FiMoon, FiSun } from 'react-icons/fi';
 import { useTheme } from 'next-themes';
-import { removeAuthCookie } from 'app/lib/auth';
 
 const DashboardHeader = () => {
   const router = useRouter();
@@ -42,8 +41,10 @@ const DashboardHeader = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
-  const handleLogout = () => {
-    removeAuthCookie();
+  const handleLogout = async () => {
+    // Aquí puedes implementar la lógica de cierre de sesión
+    // Por ejemplo, eliminar el token del almacenamiento local o llamar a una API
+    await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/login');
   };
 
