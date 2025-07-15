@@ -1,7 +1,7 @@
 // components/PomodoroTimer.tsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react'; // Para obtener la sesión del usuario
 
 // Interfaz para los datos de la sesión Pomodoro a enviar a la API
@@ -10,6 +10,9 @@ interface PomodoroSessionData {
   cycles_completed: number;
   userId: string; // ID del usuario autenticado
 }
+
+// Clave para almacenar el estado en localStorage
+const STORAGE_KEY = 'pomodoroTimerState';
 
 export default function PomodoroTimer() {
   // Estados para la configuración del temporizador
@@ -69,14 +72,13 @@ export default function PomodoroTimer() {
   };
 
   // Función para guardar la sesión Pomodoro en la base de datos
-  const savePomodoroSession = async (data: PomodoroSessionData) => {
+  // Usamos useCallback para memoizarla y evitar re-creaciones innecesarias
+  const savePomodoroSession = useCallback(async (data: PomodoroSessionData) => {
     if (typeof data.duration !== 'number' || typeof data.cycles_completed !== 'number' || data.duration <= 0 || data.cycles_completed <= 0) {
       showCustomAlert('Datos de sesión inválidos. Por favor, revise la duración y los ciclos completados.', 'error');
       console.error("Datos de sesión inválidos:", data);
       return;
     }
-
-
 
     if (!userId) {
       showCustomAlert('No se pudo guardar la sesión: Usuario no autenticado.', 'error');
@@ -105,7 +107,7 @@ export default function PomodoroTimer() {
       console.error("Fallo al guardar la sesión:", error);
       showCustomAlert(`Hubo un error al guardar la sesión: ${(error as Error).message}`, 'error');
     }
-  };
+  }, [userId]); // Dependencia: userId
 
   // --- Efectos para Sincronizar Refs con el Estado ---
   // Estos efectos mantienen los refs actualizados con los últimos valores de los estados
@@ -149,61 +151,74 @@ export default function PomodoroTimer() {
   useEffect(() => {
     // Solo actúa si el temporizador está activo y llega a 00:00
     if (minutes === 0 && seconds === 0 && isActive) {
-      // Detener el intervalo actual para evitar múltiples ejecuciones
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-
       playSound(); // Reproducir sonido al cambiar de estado
 
+      // Calcular el tiempo completado para el modo actual
+      let completedTimeForCurrentMode = 0;
       if (mode === 'work') {
-        const completedWorkTime = workTime * 60;
+        completedTimeForCurrentMode = workTime * 60;
+      } else if (mode === 'break') {
+        completedTimeForCurrentMode = breakTime * 60;
+      } else if (mode === 'long-break') {
+        completedTimeForCurrentMode = longBreakTime * 60;
+      }
+      // Actualizar la duración total de la sesión
+      setSessionDuration(prevDuration => prevDuration + completedTimeForCurrentMode);
+
+      if (mode === 'work') {
         const newCurrentCycle = currentCycle + 1;
-        const newSessionDuration = sessionDuration + completedWorkTime;
-
         setCurrentCycle(newCurrentCycle);
-        setSessionDuration(newSessionDuration);
 
-        // Determinar si es un descanso largo o corto
-        if (isLongBreakEnabled && newCurrentCycle % totalCycles === 0) {
-          setMode('long-break');
-          setMinutes(longBreakTime);
-          showCustomAlert('¡Tiempo de Descanso Largo!', 'info');
+        // Comprobar si es el último ciclo de trabajo de la sesión
+        if (newCurrentCycle === totalCycles) {
+          if (isLongBreakEnabled) {
+            setMode('long-break');
+            setMinutes(longBreakTime);
+            showCustomAlert('¡Tiempo de Descanso Largo!', 'info');
+          } else {
+            // La sesión termina aquí si el descanso largo está deshabilitado después del último ciclo de trabajo
+            setIsActive(false); // Detener el temporizador
+            savePomodoroSession({
+              duration: sessionDuration + completedTimeForCurrentMode, // Duración final
+              cycles_completed: newCurrentCycle,
+              userId: userId || 'unknown',
+            });
+            // Reiniciar para una nueva sesión
+            setCurrentCycle(0);
+            setSessionDuration(0);
+            setMode('work');
+            setMinutes(workTime);
+            setSeconds(0);
+            showCustomAlert('¡Sesión Pomodoro Finalizada!', 'success');
+          }
         } else {
+          // No es el último ciclo de trabajo, pasar a descanso corto
           setMode('break');
           setMinutes(breakTime);
           showCustomAlert('¡Tiempo de Descanso Corto!', 'info');
         }
+        setSeconds(0); // Asegurarse de que los segundos se reinicien para el nuevo modo
+      } else if (mode === 'break') {
+        // Acaba de terminar un descanso corto, siempre volver a trabajar
+        setMode('work');
+        setMinutes(workTime);
         setSeconds(0);
-        setIsActive(true); // Continuar con el siguiente temporizador
-      } else if (mode === 'break' || mode === 'long-break') {
-        const completedBreakTime = (mode === 'break' ? breakTime : longBreakTime) * 60;
-        setSessionDuration(sessionDuration + completedBreakTime);
-
-        // Si el ciclo actual ha alcanzado el total de ciclos, la sesión ha terminado
-        if (currentCycle >= totalCycles && isLongBreakEnabled && currentCycle % totalCycles === 0) {
-          setIsActive(false); // Detener el temporizador
-          savePomodoroSession({
-            duration: sessionDuration + completedBreakTime, // Incluir el último descanso
-            cycles_completed: currentCycle,
-            userId: userId || 'unknown', // Usar 'unknown' si userId no está disponible
-          });
-          // Reiniciar para una nueva sesión
-          setCurrentCycle(0);
-          setSessionDuration(0);
-          setMode('work');
-          setMinutes(workTime);
-          setSeconds(0);
-          showCustomAlert('¡Sesión Pomodoro Finalizada!', 'success');
-        } else {
-          // Si no es el final de la sesión, volver al modo de trabajo
-          setMode('work');
-          setMinutes(workTime);
-          setSeconds(0);
-          setIsActive(true); // Continuar con el siguiente temporizador de trabajo
-          showCustomAlert('¡Tiempo de Trabajo!', 'info');
-        }
+        showCustomAlert('¡Tiempo de Trabajo!', 'info');
+      } else if (mode === 'long-break') {
+        // Acaba de terminar un descanso largo, la sesión termina
+        setIsActive(false); // Detener el temporizador
+        savePomodoroSession({
+          duration: sessionDuration + completedTimeForCurrentMode, // Duración final
+          cycles_completed: currentCycle, // Total de ciclos de trabajo completados
+          userId: userId || 'unknown',
+        });
+        // Reiniciar para una nueva sesión
+        setCurrentCycle(0);
+        setSessionDuration(0);
+        setMode('work');
+        setMinutes(workTime);
+        setSeconds(0);
+        showCustomAlert('¡Sesión Pomodoro Finalizada!', 'success');
       }
     }
   }, [minutes, seconds, isActive, mode, currentCycle, totalCycles, workTime, breakTime, longBreakTime, sessionDuration, isLongBreakEnabled, savePomodoroSession, userId]);
@@ -211,14 +226,64 @@ export default function PomodoroTimer() {
 
   // Efecto para inicializar o actualizar el temporizador cuando se cambian los tiempos de configuración
   // o cuando el temporizador está inactivo.
+  // También se encarga de la carga inicial del estado desde localStorage.
   useEffect(() => {
-    if (!isActive) {
-      // Si el modo es 'work', usa workTime. Si es 'break', usa breakTime. Si es 'long-break', usa longBreakTime.
-      const timeToSet = mode === 'work' ? workTime : (mode === 'break' ? breakTime : longBreakTime);
-      setMinutes(timeToSet);
-      setSeconds(0);
+    if (typeof window !== 'undefined') {
+      const savedState = localStorage.getItem(STORAGE_KEY);
+      if (savedState) {
+        try {
+          const parsedState = JSON.parse(savedState);
+          setWorkTime(parsedState.workTime || 25);
+          setBreakTime(parsedState.breakTime || 5);
+          setLongBreakTime(parsedState.longBreakTime || 15);
+          setTotalCycles(parsedState.totalCycles || 4);
+          setIsLongBreakEnabled(parsedState.isLongBreakEnabled !== undefined ? parsedState.isLongBreakEnabled : true);
+
+          // Asegurarse de que los minutos y segundos se establezcan correctamente
+          // Si estaba en work/break/long-break, usar los minutos/segundos guardados
+          // Si no, usar el tiempo de trabajo configurado
+          setMinutes(parsedState.minutes !== undefined ? parsedState.minutes : parsedState.workTime || 25);
+          setSeconds(parsedState.seconds !== undefined ? parsedState.seconds : 0);
+          setMode(parsedState.mode || 'work');
+          setCurrentCycle(parsedState.currentCycle || 0);
+          setSessionDuration(parsedState.sessionDuration || 0);
+
+          // Solo activar si estaba activo al guardar
+          if (parsedState.isActive) {
+            setIsActive(true);
+          }
+        } catch (e) {
+          console.error("Error al parsear el estado guardado de localStorage:", e);
+          // Limpiar estado corrupto si el parseo falla
+          localStorage.removeItem(STORAGE_KEY);
+          // Y luego inicializar con valores por defecto
+          setMinutes(workTime);
+          setSeconds(0);
+          setIsActive(false);
+          setMode('work');
+          setCurrentCycle(0);
+          setSessionDuration(0);
+        }
+      } else {
+        // Si no hay estado guardado, inicializar con los valores por defecto
+        setMinutes(workTime);
+        setSeconds(0);
+        setIsActive(false); // Asegurarse de que no empiece automáticamente
+      }
     }
-  }, [workTime, breakTime, longBreakTime, mode, isActive]);
+  }, []); // Se ejecuta solo una vez al montar el componente
+
+  // Efecto para guardar el estado en localStorage cada vez que cambian los estados relevantes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stateToSave = {
+        workTime, breakTime, longBreakTime, totalCycles, isLongBreakEnabled,
+        minutes, seconds, isActive, mode, currentCycle, sessionDuration
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+    }
+  }, [workTime, breakTime, longBreakTime, totalCycles, isLongBreakEnabled, minutes, seconds, isActive, mode, currentCycle, sessionDuration]);
+
 
   // --- Funciones de Control del Temporizador ---
 
@@ -238,23 +303,45 @@ export default function PomodoroTimer() {
     setMinutes(workTime); // Reiniciar al workTime configurado
     setSeconds(0);
     showCustomAlert('Sesión Reiniciada.', 'info');
+    // Limpiar el estado guardado en localStorage al reiniciar
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY);
+    }
   };
 
   // --- Manejadores de Cambio para Inputs (con validación) ---
 
   const handleWorkTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(e.target.value);
-    setWorkTime(value < 1 ? 1 : value); // Mínimo 1 minuto
+    const newValue = value < 1 ? 1 : value;
+    setWorkTime(newValue);
+    // Actualizar el display inmediatamente si el temporizador está inactivo y en modo trabajo
+    if (!isActive && mode === 'work') {
+      setMinutes(newValue);
+      setSeconds(0);
+    }
   };
 
   const handleBreakTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(e.target.value);
-    setBreakTime(value < 1 ? 1 : value); // Mínimo 1 minuto
+    const newValue = value < 1 ? 1 : value;
+    setBreakTime(newValue);
+    // Actualizar el display inmediatamente si el temporizador está inactivo y en modo descanso
+    if (!isActive && mode === 'break') {
+      setMinutes(newValue);
+      setSeconds(0);
+    }
   };
 
   const handleLongBreakTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(e.target.value);
-    setLongBreakTime(value < 1 ? 1 : value); // Mínimo 1 minuto
+    const newValue = value < 1 ? 1 : value;
+    setLongBreakTime(newValue);
+    // Actualizar el display inmediatamente si el temporizador está inactivo y en modo descanso largo
+    if (!isActive && mode === 'long-break') {
+      setMinutes(newValue);
+      setSeconds(0);
+    }
   };
 
   const handleTotalCyclesChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -25,6 +25,7 @@ model User {
   updated_at DateTime @updatedAt
 
   pomodoroSessions PomodoroSession[]
+  tasks            Task[]
 
   @@map("users")
 }
@@ -34,9 +35,25 @@ model PomodoroSession {
   duration         Int
   cycles_completed Int
   completed_at     DateTime @default(now())
-  user_id          Int
-  user             User     @relation(fields: [user_id], references: [user_id])
+  userId           Int
+  user             User     @relation(fields: [userId], references: [user_id])
 
   @@map("pomodoro_sessions")
 }
 
+model Task {
+  id           Int      @id @default(autoincrement())
+  title        String
+  description  String?  // Opcional, puede ser nulo
+  due_date     DateTime? // Opcional, fecha de vencimiento
+  priority     String   @default("medium") // Podría ser "low", "medium", "high"
+  is_completed Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relación con el modelo User
+  userId       Int
+  user         User @relation(fields: [userId], references: [user_id])
+
+  @@map("tasks") // Mapea este modelo a una tabla llamada 'tasks' en la base de datos
+}

@@ -1,8 +1,8 @@
-import "server-only";
+"server-only";
 
 import NextAuth, { AuthOptions, User } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { db } from "app/lib/db";
+import prisma from "app/lib/prisma";
 import bcrypt from "bcryptjs";
 import { User as PrismaUser } from "@prisma/client";
 
@@ -10,7 +10,7 @@ import { User as PrismaUser } from "@prisma/client";
 // Asegúrate de que tu modelo 'user' en la base de datos incluya id, name, email, password y role.
 async function getUser(email: string): Promise<PrismaUser | null> {
   try {
-    const user = await db.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email },
     });
     return user;

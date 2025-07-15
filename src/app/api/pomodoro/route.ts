@@ -1,8 +1,8 @@
 // app/api/pomodoro/route.ts
 import { NextResponse } from 'next/server';
-import { db } from 'app/lib/db';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from 'app/app/api/auth/[...nextauth]/route';
+import prisma from 'app/lib/prisma'; // Asegúrate de que la ruta sea correcta
 
 export async function POST(request: Request) {
   // 1. Obtener la sesión del usuario para asegurar que esté autenticado
@@ -23,9 +23,9 @@ export async function POST(request: Request) {
     }
 
     // 4. Crear el registro en la base de datos, pasando el objeto 'data'
-    const newPomodoroSession = await db.pomodoroSession.create({
+    const newPomodoroSession = await prisma.pomodoroSession.create({
       data: {
-        user_id: parseInt(session.user.id, 10), // El ID de la sesión es string, la BD espera un número
+        userId: parseInt(session.user.id, 10), // El ID de la sesión es string, la BD espera un número
         duration: Math.round(duration), // Guarda la duración en segundos
         cycles_completed: cycles_completed,
       },
