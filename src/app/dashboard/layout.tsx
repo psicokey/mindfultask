@@ -1,16 +1,24 @@
-import DashboardHeader from 'app/components/dashboard/DashboardHeader';
+// app/dashboard/layout.tsx
+import { getServerSession } from 'next-auth';
+import { authOptions } from 'app/app/api/auth/[...nextauth]/route'; // Ajusta la ruta de importación si es necesario
+import { redirect } from 'next/navigation';
+import DashboardLayoutClient from 'app/components/dashboard/DashboardLayoutClient'; // Importa el layout de cliente
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user) {
+    redirect('/auth/login');
+  }
+
+  // Pasa la sesión del usuario al componente de layout de cliente
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <DashboardHeader />
-      <main className="py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        {children}
-      </main>
-    </div>
+    <DashboardLayoutClient user={session.user}>
+      {children}
+    </DashboardLayoutClient>
   );
 }

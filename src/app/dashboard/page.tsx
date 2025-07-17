@@ -1,23 +1,33 @@
 // app/dashboard/page.tsx
-// NO 'use client'; aquí, para que sea un Server Component
+'use client'; // Esta página necesita ser un componente de cliente para usar useDashboardContext
 
-import { redirect } from 'next/navigation';
-import { getServerSession } from "next-auth";
-// Asegúrate de que la ruta sea correcta para tu auth.ts
-// Si auth.ts está en 'src/lib', la ruta sería '@/lib/auth'
-import { authOptions } from "app/lib/auth"; 
+import TaskSummary from 'app/components/dashboard/TaskSummary';
+import TaskList from 'app/components/dashboard/TaskList';
+import { useDashboardContext } from 'app/components/dashboard/DashboardContext'; // Importa el hook de contexto
 
-// Importa el nuevo componente cliente
-import DashboardClient from './DashboardClient';
+export default function DashboardPage() {
+  const { handleOpenNewTaskModal, handleOpenEditTaskModal, taskRefreshTrigger } = useDashboardContext();
 
-export default async function DashboardPage() {
-  const session = await getServerSession(authOptions);
+  return (
+    <>
+      {/* El botón "Nueva Tarea" */}
+      <button
+        onClick={handleOpenNewTaskModal}
+        className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:bg-green-700 dark:hover:bg-green-800"
+        type="button"
+      >
+        + Nueva Tarea
+      </button>
 
-  // Si no hay sesión o usuario, redirige al login
-  if (!session || !session.user) {
-    redirect("/login"); // Redirige a tu página de login
-  }
+      {/* Componente TaskSummary */}
+      {/* TaskSummary ahora obtiene onEditTask del contexto */}
+      <TaskSummary />
 
-  // Pasa el objeto 'user' de la sesión al componente cliente
-  return <DashboardClient user={session.user} />;
+      {/* Componente TaskList */}
+      <TaskList
+        refreshTrigger={taskRefreshTrigger}
+        onEditTask={handleOpenEditTaskModal}
+      />
+    </>
+  );
 }
