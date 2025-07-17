@@ -2,30 +2,42 @@
 import Link from 'next/link';
 import { FaCheckCircle, FaBrain, FaClock, FaChartLine, FaGithub } from 'react-icons/fa';
 import { FiExternalLink } from 'react-icons/fi';
+import ThemeSwitcher from 'app/components/ThemeSwitcher'; // Importa el nuevo componente
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-800 transition-colors duration-500">
+      {/* Header con botones de tema y login */}
+      <div className="absolute top-4 right-4 flex space-x-3 z-10">
+        <ThemeSwitcher />
+        <Link 
+          href="/login" 
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-lg text-base transition-colors shadow-md dark:bg-blue-700 dark:hover:bg-blue-800"
+        >
+          Iniciar Sesión
+        </Link>
+      </div>
+
       {/* Hero Section */}
       <header className="py-20 px-4 text-center">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
             <span className="text-blue-600">MindfulTask</span> - Productividad con Propósito
           </h1>
-          <p className="text-xl text-gray-600 mb-10 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto">
             El gestor de tareas que combina técnicas psicológicas con herramientas de productividad 
             para ayudarte a lograr más sin quemarte.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link 
               href="/register" 
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors shadow-lg"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors shadow-lg dark:bg-blue-700 dark:hover:bg-blue-800"
             >
               Comenzar Gratis
             </Link>
             <Link 
               href="#features" 
-              className="bg-white hover:bg-gray-100 text-gray-800 font-bold py-3 px-8 rounded-lg text-lg transition-colors border border-gray-300 shadow-sm"
+              className="bg-white hover:bg-gray-100 text-gray-800 font-bold py-3 px-8 rounded-lg text-lg transition-colors border border-gray-300 shadow-sm dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700"
             >
               Conocer Más
             </Link>
@@ -34,13 +46,14 @@ export default function Home() {
       </header>
 
       {/* Logo Cloud */}
-      <div className="py-12 bg-white">
+      <div className="py-12 bg-white dark:bg-gray-800 transition-colors duration-500">
         <div className="max-w-7xl mx-auto px-4">
-          <p className="text-center text-gray-500 mb-8">Tecnologías utilizadas:</p>
+          <p className="text-center text-gray-500 dark:text-gray-400 mb-8">Tecnologías utilizadas:</p>
           <div className="flex flex-wrap justify-center gap-12 items-center">
-            <img src="/nextjs-logo.svg" alt="Next.js" className="h-12" />
+            {/* Asegúrate de que estas imágenes tengan un fondo transparente o sean SVG */}
+            <img src="/nextjs-logo.svg" alt="Next.js" className="h-12 dark:invert" /> {/* dark:invert para logos oscuros */}
             <img src="/tailwindcss-logo.svg" alt="Tailwind CSS" className="h-8" />
-            <img src="/react-logo.svg" alt="React" className="h-12" />
+            <img src="/react-logo.svg" alt="React" className="h-12 dark:invert" />
             <img src="/typescript-logo.svg" alt="TypeScript" className="h-10" />
             <img src="/mariadb-logo.svg" alt="MariaDB" className="h-10" />
           </div>
@@ -48,79 +61,79 @@ export default function Home() {
       </div>
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-4 bg-gray-50">
+      <section id="features" className="py-20 px-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-500">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-900 dark:text-white mb-16">
             Características diseñadas para tu <span className="text-blue-600">bienestar mental</span>
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
             {/* Feature 1 */}
-            <div className="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow">
               <div className="text-blue-600 mb-4">
                 <FaBrain className="text-4xl" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Técnicas Psicológicas</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">Técnicas Psicológicas</h3>
+              <p className="text-gray-600 dark:text-gray-300">
                 Incorpora principios de psicología cognitiva para mejorar tu enfoque y reducir la fatiga mental.
               </p>
             </div>
 
             {/* Feature 2 */}
-            <div className="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow">
               <div className="text-blue-600 mb-4">
                 <FaClock className="text-4xl" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Pomodoro Inteligente</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">Pomodoro Inteligente</h3>
+              <p className="text-gray-600 dark:text-gray-300">
                 Temporizador que ajusta los intervalos según tu nivel de fatiga y tipo de tarea.
               </p>
             </div>
 
             {/* Feature 3 */}
-            <div className="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow">
               <div className="text-blue-600 mb-4">
                 <FaChartLine className="text-4xl" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Estadísticas de Productividad</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">Estadísticas de Productividad</h3>
+              <p className="text-gray-600 dark:text-gray-300">
                 Visualiza tus patrones de trabajo y recibe recomendaciones personalizadas.
               </p>
             </div>
 
             {/* Feature 4 */}
-            <div className="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow">
               <div className="text-blue-600 mb-4">
                 <FaCheckCircle className="text-4xl" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Matriz de Eisenhower</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">Matriz de Eisenhower</h3>
+              <p className="text-gray-600 dark:text-gray-300">
                 Clasifica tus tareas por importancia y urgencia para una mejor priorización.
               </p>
             </div>
 
             {/* Feature 5 */}
-            <div className="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow">
               <div className="text-blue-600 mb-4">
                 <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold mb-3">Recordatorios Mindful</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">Recordatorios Mindful</h3>
+              <p className="text-gray-600 dark:text-gray-300">
                 Alertas que te invitan a pausas conscientes y respiraciones profundas.
               </p>
             </div>
 
             {/* Feature 6 */}
-            <div className="bg-white p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md hover:shadow-lg transition-shadow">
               <div className="text-blue-600 mb-4">
                 <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold mb-3">Seguridad y Privacidad</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">Seguridad y Privacidad</h3>
+              <p className="text-gray-600 dark:text-gray-300">
                 Tus datos están protegidos con encriptación y autenticación segura.
               </p>
             </div>
@@ -129,40 +142,40 @@ export default function Home() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 px-4 bg-white">
+      <section className="py-20 px-4 bg-white dark:bg-gray-800 transition-colors duration-500">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-16">
+          <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-16">
             Lo que dicen nuestros <span className="text-blue-600">usuarios</span>
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-gray-50 p-6 rounded-xl">
+            <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-xl">
               <div className="flex items-center mb-4">
-                <div className="bg-blue-100 text-blue-600 rounded-full w-12 h-12 flex items-center justify-center mr-4">
+                <div className="bg-blue-100 text-blue-600 rounded-full w-12 h-12 flex items-center justify-center mr-4 dark:bg-blue-800 dark:text-blue-200">
                   <span className="font-bold">AM</span>
                 </div>
                 <div>
-                  <h4 className="font-bold">Ana Martínez</h4>
-                  <p className="text-gray-500">Psicóloga</p>
+                  <h4 className="font-bold text-gray-900 dark:text-white">Ana Martínez</h4>
+                  <p className="text-gray-500 dark:text-gray-400">Psicóloga</p>
                 </div>
               </div>
-              <p className="text-gray-700 italic">
+              <p className="text-gray-700 italic dark:text-gray-300">
                 "MindfulTask ha transformado cómo organizo mi día. Las pausas conscientes integradas 
                 han reducido mi estrés significativamente mientras mantengo mi productividad."
               </p>
             </div>
 
-            <div className="bg-gray-50 p-6 rounded-xl">
+            <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-xl">
               <div className="flex items-center mb-4">
-                <div className="bg-blue-100 text-blue-600 rounded-full w-12 h-12 flex items-center justify-center mr-4">
+                <div className="bg-blue-100 text-blue-600 rounded-full w-12 h-12 flex items-center justify-center mr-4 dark:bg-blue-800 dark:text-blue-200">
                   <span className="font-bold">CR</span>
                 </div>
                 <div>
-                  <h4 className="font-bold">Carlos Rodríguez</h4>
-                  <p className="text-gray-500">Desarrollador</p>
+                  <h4 className="font-bold text-gray-900 dark:text-white">Carlos Rodríguez</h4>
+                  <p className="text-gray-500 dark:text-gray-400">Desarrollador</p>
                 </div>
               </div>
-              <p className="text-gray-700 italic">
+              <p className="text-gray-700 italic dark:text-gray-300">
                 "Como desarrollador, paso horas frente a la computadora. MindfulTask me ayuda a 
                 mantener el enfoque sin descuidar mi bienestar mental. ¡La matriz de Eisenhower es un game-changer!"
               </p>
@@ -172,7 +185,7 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 bg-blue-600 text-white">
+      <section className="py-20 px-4 bg-blue-600 text-white dark:bg-blue-800 transition-colors duration-500">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">
             ¿Listo para transformar tu productividad?
@@ -183,13 +196,13 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link 
               href="/register" 
-              className="bg-white hover:bg-gray-100 text-blue-600 font-bold py-3 px-8 rounded-lg text-lg transition-colors shadow-lg"
+              className="bg-white hover:bg-gray-100 text-blue-600 font-bold py-3 px-8 rounded-lg text-lg transition-colors shadow-lg dark:bg-gray-200 dark:hover:bg-gray-300 dark:text-blue-800"
             >
               Comenzar Gratis
             </Link>
             <Link 
               href="#features" 
-              className="bg-transparent hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors border border-white shadow-sm"
+              className="bg-transparent hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors border border-white shadow-sm dark:hover:bg-blue-900"
             >
               Ver Demo
             </Link>
@@ -198,7 +211,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4">
+      <footer className="bg-gray-900 text-white py-12 px-4 dark:bg-gray-950">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>

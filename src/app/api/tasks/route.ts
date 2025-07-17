@@ -1,9 +1,9 @@
 // app/api/tasks/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from 'app/lib/auth';
-import prisma from 'app/lib/prisma';
-import { Prisma } from '@prisma/client'; // Importar tipos de Prisma para condiciones
+import { authOptions } from 'app/lib/auth'; // Ruta corregida
+import prisma from 'app/lib/prisma'; // Ruta corregida
+import { Prisma } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
   console.log('API /api/tasks (POST) ha sido llamada.');
@@ -88,10 +88,13 @@ export async function GET(request: NextRequest) {
     const searchQuery = searchParams.get('search');
     const filterPriority = searchParams.get('priority');
     const filterDueDate = searchParams.get('dueDate');
-    const page = parseInt(searchParams.get('page') || '1', 10); // Página actual, por defecto 1
-    const limit = parseInt(searchParams.get('limit') || '10', 10); // Elementos por página, por defecto 10
+    const filterIsCompleted = searchParams.get('isCompleted'); // Correcto: 'isCompleted'
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '10', 10);
+    const sortField = searchParams.get('sortField') || 'createdAt'; // Correcto: 'sortField'
+    const sortOrder = searchParams.get('sortOrder') || 'desc'; // Correcto: 'sortOrder'
 
-    const skip = (page - 1) * limit; // Calcular el offset para la paginación
+    const skip = (page - 1) * limit;
 
     const whereClause: Prisma.TaskWhereInput = {
       userId: userId,
@@ -99,9 +102,11 @@ export async function GET(request: NextRequest) {
 
     // Filtrar por búsqueda de texto (título o descripción)
     if (searchQuery) {
+      // No usar .toLowerCase() aquí, Prisma ya lo maneja con 'insensitive' si la DB lo soporta
+      // o se basa en la intercalación de la columna.
       whereClause.OR = [
-        { title: { contains: searchQuery} },
-        { description: { contains: searchQuery} },
+        { title: { contains: searchQuery } },
+        { description: { contains: searchQuery } },
       ];
     }
 
@@ -110,10 +115,17 @@ export async function GET(request: NextRequest) {
       whereClause.priority = filterPriority;
     }
 
-    // Filtrar por fecha de vencimiento (corregido para buscar por día completo)
+    // Filtrar por estado de completado
+    if (filterIsCompleted === 'true') {
+      whereClause.is_completed = true;
+    } else if (filterIsCompleted === 'false') {
+      whereClause.is_completed = false;
+    }
+
+    // Filtrar por fecha de vencimiento
     if (filterDueDate) {
       const date = new Date(filterDueDate);
-      if (!isNaN(date.getTime())) { // Validar que la fecha sea válida
+      if (!isNaN(date.getTime())) {
         const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
         const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
 
@@ -126,13 +138,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Obtener las tareas y el conteo total en una sola transacción
+    // Construir el objeto de ordenación dinámicamente
+    const orderByClause: Prisma.TaskOrderByWithRelationInput = {};
+    const validSortFields = ['createdAt', 'due_date', 'title', 'priority', 'is_completed'];
+    if (validSortFields.includes(sortField)) {
+      // Asignar el campo y el orden dinámicamente
+      orderByClause[sortField as keyof Prisma.TaskOrderByWithRelationInput] = sortOrder as 'asc' | 'desc';
+    } else {
+      // Valor por defecto si el campo de ordenación no es válido
+      orderByClause.createdAt = 'desc';
+    }
+
     const [tasks, totalTasks] = await prisma.$transaction([
       prisma.task.findMany({
         where: whereClause,
-        orderBy: {
-          createdAt: 'desc', // Ordenar por fecha de creación por defecto
-        },
+        orderBy: orderByClause, // Usar el objeto de ordenación dinámico
         skip: skip,
         take: limit,
       }),

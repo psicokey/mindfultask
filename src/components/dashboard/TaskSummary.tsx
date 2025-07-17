@@ -1,16 +1,14 @@
 // src/components/dashboard/TaskSummary.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react'; // Importa useSession
 import Link from 'next/link';
 import { FaTasks, FaCheckCircle, FaRunning, FaRegClock, FaRegCalendarAlt, FaRegLightbulb } from 'react-icons/fa';
-import { Bar, Pie } from 'react-chartjs-2';
+import { Pie } from 'react-chartjs-2'; // Solo Pie es necesario ahora
 import {
   Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
+  ArcElement, // Necesario para Pie Chart
   Title,
   Tooltip,
   Legend,
@@ -19,107 +17,132 @@ import { motion } from 'framer-motion';
 
 // Registrar componentes de Chart.js
 ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
   ArcElement,
   Title,
   Tooltip,
   Legend
 );
 
+// Interfaz que coincide con el modelo Task de Prisma
 interface Task {
   id: number;
   title: string;
-  priority: 'urgent-important' | 'notUrgent-important' | 'urgent-notImportant' | 'notUrgent-notImportant';
-  due_date: string | null;
-  completed: boolean;
+  description: string | null;
+  due_date: Date | null; // Prisma devuelve Date objetos
+  priority: 'low' | 'medium' | 'high'; // Prioridades de tu schema.prisma
+  is_completed: boolean; // Coincide con Prisma
+  userId: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface TaskSummaryProps {
-  userId: number;
+  // Ya no necesitamos userId como prop, lo obtenemos con useSession
+  // userId: number;
+  onEditTask?: (task: Task) => void; // Prop para la función de edición
 }
 
-const TaskSummary: React.FC<TaskSummaryProps> = ({ userId }) => {
+const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'productivity' | 'wellbeing'>('productivity');
 
-  // Datos de ejemplo mientras implementas la API
-  useEffect(() => {
-    const fetchTasks = async () => {
-      setIsLoading(true);
-      try {
-        // Simular llamada a la API
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Datos de ejemplo
-        const exampleTasks: Task[] = [
-          { id: 1, title: 'Revisar informe mensual', priority: 'urgent-important', due_date: new Date(Date.now() + 86400000).toISOString(), completed: false },
-          { id: 2, title: 'Ejercicio de mindfulness', priority: 'notUrgent-important', due_date: null, completed: true },
-          { id: 3, title: 'Reunión con equipo', priority: 'urgent-important', due_date: new Date(Date.now() + 3600000).toISOString(), completed: false },
-          { id: 4, title: 'Actualizar perfil', priority: 'notUrgent-notImportant', due_date: null, completed: false },
-          { id: 5, title: 'Planificar semana', priority: 'notUrgent-important', due_date: new Date(Date.now() + 259200000).toISOString(), completed: true },
-          { id: 6, title: 'Responder correos', priority: 'urgent-notImportant', due_date: null, completed: false },
-        ];
-        
-        setTasks(exampleTasks);
-      } catch (error) {
-        console.error('Error fetching tasks:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const { data: session, status } = useSession();
+  const userId = session?.user?.id;
 
-    fetchTasks();
-  }, [userId]);
+  const fetchTasksData = useCallback(async () => {
+    if (status === 'loading') {
+      setIsLoading(true);
+      return;
+    }
+    if (!userId) {
+      setError('No se pudieron cargar las tareas: Usuario no autenticado.');
+      setIsLoading(false);
+      setTasks([]);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/tasks?userId=${userId}`, { // Asegúrate de que tu API de tareas pueda filtrar por userId
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.status === 204) { // No Content
+        setTasks([]);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!response.ok) {
+        let errorData = { message: 'Error al obtener las tareas.' };
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          console.error("Error al parsear la respuesta de error JSON:", parseError);
+        }
+        throw new Error(errorData.message);
+      }
+
+      const result = await response.json();
+      // Asegúrate de que las fechas se conviertan a objetos Date si no lo están ya
+      const fetchedTasks: Task[] = result.tasks.map((task: any) => ({
+        ...task,
+        due_date: task.due_date ? new Date(task.due_date) : null,
+        createdAt: new Date(task.createdAt),
+        updatedAt: new Date(task.updatedAt),
+      }));
+      setTasks(fetchedTasks);
+    } catch (err: any) {
+      console.error('Error fetching tasks:', err);
+      setError(err.message || 'Ocurrió un error inesperado al cargar las tareas.');
+      setTasks([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId, status]);
+
+  useEffect(() => {
+    fetchTasksData();
+  }, [fetchTasksData]);
+
 
   // Estadísticas calculadas
-  const completedTasks = tasks.filter(task => task.completed).length;
-  const pendingTasks = tasks.filter(task => !task.completed).length;
-  const overdueTasks = tasks.filter(task => 
-    !task.completed && 
-    task.due_date && 
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(task => task.is_completed).length;
+  const pendingTasks = tasks.filter(task => !task.is_completed).length;
+  const overdueTasks = tasks.filter(task =>
+    !task.is_completed &&
+    task.due_date &&
     new Date(task.due_date) < new Date()
   ).length;
 
   // Datos para gráfico de prioridades
   const priorityData = {
-    labels: ['Urgente/Importante', 'No urgente/Importante', 'Urgente/No importante', 'No urgente/No importante'],
+    labels: ['Baja', 'Media', 'Alta'], // Coincide con tus prioridades de Prisma
     datasets: [
       {
         data: [
-          tasks.filter(t => t.priority === 'urgent-important').length,
-          tasks.filter(t => t.priority === 'notUrgent-important').length,
-          tasks.filter(t => t.priority === 'urgent-notImportant').length,
-          tasks.filter(t => t.priority === 'notUrgent-notImportant').length,
+          tasks.filter(t => t.priority === 'low').length,
+          tasks.filter(t => t.priority === 'medium').length,
+          tasks.filter(t => t.priority === 'high').length,
         ],
         backgroundColor: [
-          'rgba(239, 68, 68, 0.7)',  // rojo
-          'rgba(59, 130, 246, 0.7)',  // azul
-          'rgba(234, 179, 8, 0.7)',   // amarillo
-          'rgba(20, 184, 166, 0.7)',  // teal
+          'rgba(20, 184, 166, 0.7)',  // teal para baja
+          'rgba(59, 130, 246, 0.7)',  // azul para media
+          'rgba(239, 68, 68, 0.7)',   // rojo para alta
         ],
         borderColor: [
-          'rgba(239, 68, 68, 1)',
-          'rgba(59, 130, 246, 1)',
-          'rgba(234, 179, 8, 1)',
           'rgba(20, 184, 166, 1)',
+          'rgba(59, 130, 246, 1)',
+          'rgba(239, 68, 68, 1)',
         ],
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  // Datos para gráfico de productividad semanal (ejemplo)
-  const productivityData = {
-    labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
-    datasets: [
-      {
-        label: 'Tareas completadas',
-        data: [3, 5, 2, 7, 4, 1, 0], // Datos de ejemplo
-        backgroundColor: 'rgba(79, 70, 229, 0.7)',
-        borderColor: 'rgba(79, 70, 229, 1)',
         borderWidth: 1,
       },
     ],
@@ -127,27 +150,28 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ userId }) => {
 
   // Consejos basados en estadísticas
   const getWellbeingTips = () => {
-    const urgentImportantCount = tasks.filter(t => t.priority === 'urgent-important').length;
-    const completedRatio = tasks.length > 0 ? completedTasks / tasks.length : 0;
+    const highPriorityPending = tasks.filter(t => t.priority === 'high' && !t.is_completed).length;
+    const completionRate = totalTasks > 0 ? completedTasks / totalTasks : 0;
     
     const tips = [];
-    
-    if (urgentImportantCount > 3) {
-      tips.push('Tienes muchas tareas urgentes e importantes. Considera delegar algunas o replantear plazos.');
-    }
-    
-    if (completedRatio < 0.3) {
-      tips.push('Intenta dividir tus tareas en pasos más pequeños para sentir más logros durante el día.');
-    } else if (completedRatio > 0.8) {
-      tips.push('¡Gran trabajo completando tareas! Recuerda tomar descansos para mantener tu energía.');
-    }
     
     if (overdueTasks > 0) {
       tips.push(`Tienes ${overdueTasks} tareas atrasadas. Revisa si aún son relevantes o renegocia los plazos.`);
     }
     
+    if (highPriorityPending > 0) {
+      tips.push(`Tienes ${highPriorityPending} tareas de alta prioridad pendientes. ¡Enfócate en ellas primero!`);
+    }
+
+    if (totalTasks > 0 && completionRate < 0.5) {
+      tips.push('Considera dividir las tareas grandes en pasos más pequeños para facilitar su inicio y seguimiento.');
+    } else if (totalTasks > 0 && completionRate > 0.8) {
+      tips.push('¡Excelente tasa de completación! Recuerda tomar descansos regulares para evitar el agotamiento.');
+    }
+    
     if (tips.length === 0) {
-      tips.push('Tu carga de trabajo parece equilibrada. ¡Sigue así y recuerda tomar pausas activas!');
+      tips.push('Tu gestión de tareas parece equilibrada. ¡Sigue así!');
+      tips.push('No olvides programar tiempo para actividades de ocio y bienestar.');
     }
     
     return tips;
@@ -171,6 +195,15 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ userId }) => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded relative text-sm max-w-lg mx-auto shadow-xl">
+        <strong className="font-bold">Error:</strong>
+        <span className="block sm:inline"> {error}</span>
+      </div>
+    );
+  }
+
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
@@ -180,12 +213,14 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ userId }) => {
           <button
             onClick={() => setActiveTab('productivity')}
             className={`px-4 py-3 text-sm font-medium ${activeTab === 'productivity' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+            type="button"
           >
             Productividad
           </button>
           <button
             onClick={() => setActiveTab('wellbeing')}
             className={`px-4 py-3 text-sm font-medium ${activeTab === 'wellbeing' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+            type="button"
           >
             Bienestar
           </button>
@@ -208,7 +243,7 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ userId }) => {
                   <FaTasks className="text-blue-600 dark:text-blue-400 mr-2" />
                   <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total tareas</h3>
                 </div>
-                <p className="text-2xl font-bold mt-1">{tasks.length}</p>
+                <p className="text-2xl font-bold mt-1">{totalTasks}</p>
               </motion.div>
 
               <motion.div 
@@ -251,11 +286,11 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ userId }) => {
               </motion.div>
             </div>
 
-            {/* Gráficos */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div>
-                <h3 className="text-lg font-medium mb-4">Distribución por prioridad</h3>
-                <div className="h-64">
+            {/* Gráfico de Distribución por Prioridad */}
+            <div className="mb-8">
+              <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-4 text-center">Distribución por prioridad</h3>
+              <div className="h-64 flex justify-center items-center"> {/* Centrar el gráfico */}
+                {totalTasks > 0 ? (
                   <Pie 
                     data={priorityData}
                     options={{
@@ -265,44 +300,49 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ userId }) => {
                         legend: {
                           position: 'bottom',
                           labels: {
-                            color: '#6B7280',
+                            color: 'rgb(107 114 128)', // Tailwind gray-500
                           },
                         },
+                        title: {
+                          display: false, // El título ya está arriba
+                        },
+                        tooltip: {
+                          backgroundColor: 'rgba(0,0,0,0.7)',
+                          bodyColor: '#fff',
+                          titleColor: '#fff',
+                        }
                       },
                     }}
                   />
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-medium mb-4">Productividad semanal</h3>
-                <div className="h-64">
-                  <Bar
-                    data={productivityData}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      scales: {
-                        y: {
-                          beginAtZero: true,
-                          ticks: {
-                            precision: 0,
-                          },
-                        },
-                      },
-                    }}
-                  />
-                </div>
+                ) : (
+                  <p className="text-gray-600 dark:text-gray-400">No hay tareas para mostrar la distribución por prioridad.</p>
+                )}
               </div>
             </div>
-
-            {/* Acción rápida */}
-            <div className="mt-8">
-            
+            <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+              <div className="flex items-start">
+                <FaRegCalendarAlt className="text-purple-600 dark:text-purple-400 mt-1 mr-3 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium mb-2">Ritmo de trabajo</h4>
+                  <p className="text-sm">
+                    {totalTasks === 0 
+                      ? "Aún no tienes tareas. ¡Es un buen momento para añadir algunas y empezar a organizar!" 
+                      : `Has completado ${completedTasks} tareas (${Math.round((completedTasks / totalTasks) * 100)}% de tu lista).`}
+                  </p>
+                  {totalTasks > 0 && (
+                    <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                      <div 
+                        className="bg-purple-600 dark:bg-purple-400 h-2.5 rounded-full" 
+                        style={{ width: `${(completedTasks / totalTasks) * 100}%` }}
+                      ></div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6 text-gray-800 dark:text-white">
             <h3 className="text-lg font-medium">Perspectiva de bienestar</h3>
             
             <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
@@ -310,10 +350,10 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ userId }) => {
                 <FaRegLightbulb className="text-blue-600 dark:text-blue-400 mt-1 mr-3 flex-shrink-0" />
                 <div>
                   <h4 className="font-medium mb-2">Consejos basados en tu actividad</h4>
-                  <ul className="space-y-2">
+                  <ul className="space-y-2 text-sm">
                     {wellbeingTips.map((tip, index) => (
                       <li key={index} className="flex items-start">
-                        <span className="inline-block h-2 w-2 rounded-full bg-blue-600 mt-2 mr-2"></span>
+                        <span className="inline-block h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400 mt-2 mr-2 flex-shrink-0"></span>
                         <span>{tip}</span>
                       </li>
                     ))}
@@ -322,25 +362,6 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ userId }) => {
               </div>
             </div>
 
-            <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-              <div className="flex items-start">
-                <FaRegCalendarAlt className="text-purple-600 dark:text-purple-400 mt-1 mr-3 flex-shrink-0" />
-                <div>
-                  <h4 className="font-medium mb-2">Ritmo de trabajo</h4>
-                  <p className="text-sm">
-                    {completedTasks === 0 
-                      ? "Aún no has completado tareas. Empieza con algo pequeño para ganar impulso." 
-                      : `Has completado ${completedTasks} tareas (${Math.round((completedTasks / tasks.length) * 100)}% de tu lista).`}
-                  </p>
-                  <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                    <div 
-                      className="bg-purple-600 h-2.5 rounded-full" 
-                      style={{ width: `${(completedTasks / tasks.length) * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </div>
 
             <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
               <div className="flex items-start">

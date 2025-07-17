@@ -10,11 +10,11 @@ interface ProvidersProps {
   session: Session | null; // Acepta la sesión como prop
 }
 
-export function Providers({ children, session }: ProvidersProps) {
+export default function Providers({ children }: ProvidersProps) {
   return (
     // Envuelve el ThemeProvider dentro del SessionProvider
     // para que los componentes dentro de ThemeProvider puedan acceder a la sesión
-    <SessionProvider session={session}>
+    <SessionProvider>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         {children}
       </ThemeProvider>

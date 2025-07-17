@@ -3,72 +3,96 @@
 
 import { useState } from 'react';
 import TaskSummary from 'app/components/dashboard/TaskSummary';
-import PomodoroTimer from 'app/components/dashboard/PomodoroTimer'; // Asegúrate de que la ruta sea correcta
-import TaskForm from 'app/components/TaskForm'; // Asegúrate de que la ruta sea correcta
-import Modal from 'app/components/Modal'; // Asegúrate de que la ruta sea correcta
-import { Session } from 'next-auth'; // Importa el tipo Session de next-auth
-import TaskList from 'app/components/dashboard/TaskList'; // Asegúrate de que la ruta sea correcta
+import PomodoroTimer from 'app/components/dashboard/PomodoroTimer';
+import TaskForm from 'app/components/TaskForm';
+import { Task } from '@prisma/client';
+import Modal from 'app/components/Modal';
+import { Session } from 'next-auth';
+import TaskList from 'app/components/dashboard/TaskList';
 
 interface DashboardClientProps {
-  user: Session['user']; // Recibe el objeto user de la sesión como prop
+  user: Session['user'];
 }
 
 export default function DashboardClient({ user }: DashboardClientProps) {
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [taskRefreshTrigger, setTaskRefreshTrigger] = useState(0); 
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [taskRefreshTrigger, setTaskRefreshTrigger] = useState(0);
 
-  const handleOpenTaskModal = () => setIsTaskModalOpen(true);
-  const handleCloseTaskModal = () => setIsTaskModalOpen(false);
+  const handleOpenNewTaskModal = () => {
+    setSelectedTask(null);
+    setIsFormModalOpen(true);
+  };
 
-  // Función que se llamará cuando una tarea sea creada con éxito
-  const handleTaskCreated = () => {
-    handleCloseTaskModal(); // Cierra el modal después de crear la tarea
-    // Aquí podrías, por ejemplo, recargar la lista de tareas si tuvieras una
-    // fetchTasks();
+  const handleOpenEditTaskModal = (task: Task) => {
+    setSelectedTask(task);
+    setIsFormModalOpen(true);
+  };
+
+  const handleCloseFormModal = () => {
+    setIsFormModalOpen(false);
+    setSelectedTask(null);
+  };
+
+  const handleTaskFormSuccess = () => {
+    handleCloseFormModal();
+    setTaskRefreshTrigger(prev => prev + 1);
   };
 
   if (!user) {
-    // Esto no debería ocurrir si el Server Component ya redirigió,
-    // pero es una salvaguarda.
     return <p>Cargando usuario...</p>;
   }
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4 sm:p-6 lg:p-8">
-      <main className="container mx-auto py-8">
+      <main className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-extrabold text-center mb-10 text-gray-800 dark:text-white">
           Bienvenido a MindfulTask, {user.name || user.email}!
         </h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* Ajuste del diseño de la cuadrícula a 3 columnas en pantallas grandes */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"> {/* Cambiado a lg:grid-cols-3 */}
           {/* Columna para el Pomodoro Timer */}
-          <div className="md:col-span-1 lg:col-span-1">
+          <div className="md:col-span-1 lg:col-span-1"> {/* Ahora ocupa 1 de 3 columnas */}
             <PomodoroTimer />
           </div>
 
-          {/* Columna para la creación de tareas y otros elementos */}
-          <div className="md:col-span-1 lg:col-span-2 flex flex-col space-y-8">
-            {/* Botón para abrir el modal de nueva tarea */}
+          {/* Columna para la creación de tareas y TaskSummary */}
+          <div className="md:col-span-1 lg:col-span-1 flex flex-col space-y-8"> {/* Ahora ocupa 1 de 3 columnas */}
             <button
-              onClick={handleOpenTaskModal}
+              onClick={handleOpenNewTaskModal}
               className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:bg-green-700 dark:hover:bg-green-800"
+              type="button"
             >
               + Nueva Tarea
             </button>
 
-            {/* Componente TaskSummary, ahora recibe userId como prop */}
-            <TaskSummary userId={parseInt(user.id, 10)} setIsTaskModalOpen={setIsTaskModalOpen} />
+            <TaskSummary
+              userId={parseInt(user.id, 10)}
+              onEditTask={handleOpenEditTaskModal}
+            />
+          </div>
 
-            {/* Aquí podrías agregar más componentes o secciones del dashboard */}
-          <TaskList refreshTrigger={taskRefreshTrigger} />
+          {/* Columna para la TaskList */}
+          <div className="md:col-span-2 lg:col-span-1 flex flex-col space-y-8"> {/* Ahora ocupa 1 de 3 columnas */}
+            <TaskList
+              refreshTrigger={taskRefreshTrigger}
+              onEditTask={handleOpenEditTaskModal}
+            />
           </div>
         </div>
       </main>
 
-      {/* Modal para Crear Tarea */}
-      <Modal isOpen={isTaskModalOpen} onClose={handleCloseTaskModal} title="Crear Nueva Tarea">
-        {/* TaskForm también recibe userId como prop si lo necesita, o usa useSession internamente */}
-        <TaskForm onTaskCreated={handleTaskCreated} />
+      <Modal
+        isOpen={isFormModalOpen}
+        onClose={handleCloseFormModal}
+        title={selectedTask ? 'Editar Tarea' : 'Crear Nueva Tarea'}
+      >
+        <TaskForm
+          initialTask={selectedTask}
+          onTaskCreated={handleTaskFormSuccess}
+          onTaskUpdated={handleTaskFormSuccess}
+        />
       </Modal>
     </div>
   );

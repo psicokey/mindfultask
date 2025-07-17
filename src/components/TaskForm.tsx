@@ -1,20 +1,44 @@
 // components/TaskForm.tsx
 'use client';
 
-import { useState } from 'react';
-import { useSession } from 'next-auth/react'; // Para obtener el ID del usuario autenticado
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { Task } from '@prisma/client'; // Importa el tipo Task
 
-export default function TaskForm({ onTaskCreated }: { onTaskCreated?: () => void }) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [dueDate, setDueDate] = useState(''); // Formato YYYY-MM-DD para input type="date"
-  const [priority, setPriority] = useState('medium'); // Valores: low, medium, high
+interface TaskFormProps {
+  onTaskCreated?: () => void; // Callback para cuando se crea una tarea
+  onTaskUpdated?: () => void; // Callback para cuando se actualiza una tarea
+  initialTask?: Task | null; // Prop opcional para la tarea a editar
+}
+
+export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: TaskFormProps) {
+  // Los estados se inicializan con los valores de initialTask o con valores por defecto
+  const [title, setTitle] = useState(initialTask?.title || '');
+  const [description, setDescription] = useState(initialTask?.description || '');
+  // Formatear la fecha para el input type="date" (YYYY-MM-DD)
+  const [dueDate, setDueDate] = useState(
+    initialTask?.due_date ? new Date(initialTask.due_date).toISOString().split('T')[0] : ''
+  );
+  const [priority, setPriority] = useState(initialTask?.priority || 'medium');
+  const [isCompleted, setIsCompleted] = useState(initialTask?.is_completed || false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const { data: session } = useSession();
-  const userId = session?.user?.id; // Obtener el ID del usuario de la sesión
+  const userId = session?.user?.id;
+
+  // Efecto para actualizar los campos del formulario si initialTask cambia
+  // Esto es crucial cuando el modal de edición se reutiliza para diferentes tareas
+  useEffect(() => {
+    setTitle(initialTask?.title || '');
+    setDescription(initialTask?.description || '');
+    setDueDate(initialTask?.due_date ? new Date(initialTask.due_date).toISOString().split('T')[0] : '');
+    setPriority(initialTask?.priority || 'medium');
+    setIsCompleted(initialTask?.is_completed || false);
+    setError(null);
+    setSuccess(null);
+  }, [initialTask]); // Se ejecuta cada vez que la prop initialTask cambia
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -22,7 +46,7 @@ export default function TaskForm({ onTaskCreated }: { onTaskCreated?: () => void
     setSuccess(null);
 
     if (!userId) {
-      setError('Debes iniciar sesión para crear una tarea.');
+      setError('Debes iniciar sesión para crear/editar una tarea.');
       return;
     }
 
@@ -33,38 +57,54 @@ export default function TaskForm({ onTaskCreated }: { onTaskCreated?: () => void
 
     setIsLoading(true);
 
+    const taskData = {
+      title: title.trim(),
+      description: description ? description.trim() : null,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : null, // Asegura formato ISO para el backend
+      priority,
+      is_completed: isCompleted,
+      userId: parseInt(userId), // Asegura que el userId se envíe como número
+    };
+
     try {
-      const response = await fetch('/api/tasks', {
-        method: 'POST',
+      // Determina si es una creación (POST) o una actualización (PUT)
+      const method = initialTask ? 'PUT' : 'POST';
+      const url = initialTask ? `/api/tasks/${initialTask.id}` : '/api/tasks';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          title,
-          description: description || null, // Enviar null si está vacío para campos opcionales
-          dueDate: dueDate ? new Date(dueDate).toISOString() : null, // Convertir a ISO string si hay fecha
-          priority,
-          userId: parseInt(userId), // Asegúrate de que el userId sea un número si tu DB lo espera así
-        }),
+        body: JSON.stringify(taskData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al crear la tarea.');
+        throw new Error(errorData.message || `Error al ${initialTask ? 'actualizar' : 'crear'} la tarea.`);
       }
 
       const result = await response.json();
-      setSuccess('Tarea creada con éxito!');
-      setTitle(''); // Limpiar formulario
-      setDescription('');
-      setDueDate('');
-      setPriority('medium');
-      if (onTaskCreated) {
-        onTaskCreated(); // Llamar callback si se proporciona
+      setSuccess(`Tarea ${initialTask ? 'actualizada' : 'creada'} con éxito!`);
+
+      if (!initialTask) {
+        // Limpiar formulario solo si es una nueva tarea
+        setTitle('');
+        setDescription('');
+        setDueDate('');
+        setPriority('medium');
+        setIsCompleted(false);
+        if (onTaskCreated) {
+          onTaskCreated(); // Llamar callback de creación
+        }
+      } else {
+        if (onTaskUpdated) {
+          onTaskUpdated(); // Llamar callback de actualización
+        }
       }
-      console.log('Tarea creada:', result.task);
+      console.log(`Tarea ${initialTask ? 'actualizada' : 'creada'}:`, result.task);
     } catch (err: any) {
-      console.error('Error al crear tarea:', err);
+      console.error(`Error al ${initialTask ? 'actualizar' : 'crear'} tarea:`, err);
       setError(err.message || 'Ocurrió un error inesperado.');
     } finally {
       setIsLoading(false);
@@ -73,7 +113,9 @@ export default function TaskForm({ onTaskCreated }: { onTaskCreated?: () => void
 
   return (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-lg mx-auto font-sans text-gray-900 dark:text-white">
-      <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-6">Crear Nueva Tarea</h2>
+      <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-6">
+        {initialTask ? 'Editar Tarea' : 'Crear Nueva Tarea'}
+      </h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -134,6 +176,21 @@ export default function TaskForm({ onTaskCreated }: { onTaskCreated?: () => void
           </select>
         </div>
 
+        {initialTask && ( // Solo muestra el checkbox de completado en modo edición
+          <div>
+            <label htmlFor="isCompleted" className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 cursor-pointer">
+              <input
+                type="checkbox"
+                id="isCompleted"
+                checked={isCompleted}
+                onChange={(e) => setIsCompleted(e.target.checked)}
+                className="mr-2 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600"
+              />
+              Tarea Completada
+            </label>
+          </div>
+        )}
+
         {error && (
           <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded relative text-sm" role="alert">
             <strong className="font-bold">Error:</strong>
@@ -153,7 +210,7 @@ export default function TaskForm({ onTaskCreated }: { onTaskCreated?: () => void
           disabled={isLoading}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 dark:bg-blue-700 dark:hover:bg-blue-800"
         >
-          {isLoading ? 'Creando Tarea...' : 'Crear Tarea'}
+          {isLoading ? (initialTask ? 'Actualizando...' : 'Creando Tarea...') : (initialTask ? 'Guardar Cambios' : 'Crear Tarea')}
         </button>
       </form>
     </div>

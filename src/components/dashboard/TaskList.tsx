@@ -3,14 +3,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { Task } from '@prisma/client'; // Importa el tipo Task generado por Prisma
+import { Task } from '@prisma/client';
+import { useRouter } from 'next/navigation';
 
 interface TaskListProps {
   refreshTrigger?: number;
   onEditTask?: (task: Task) => void;
 }
 
-export default function TaskList({ refreshTrigger, onEditTask = () => {} }: TaskListProps) {
+export default function TaskList({ refresh, refreshTrigger, onEditTask = () => {} }: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,14 +21,20 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
   const [filterDueDate, setFilterDueDate] = useState('');
+  const [filterIsCompleted, setFilterIsCompleted] = useState(''); // Nuevo estado: '', 'true', 'false'
+
+  // Estados para la ordenación
+  const [sortField, setSortField] = useState('createdAt'); // Campo por defecto, alineado con Prisma
+  const [sortOrder, setSortOrder] = useState('desc'); // Orden por defecto
 
   // Estados para la paginación
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // Puedes hacer esto configurable
-  const [totalTasks, setTotalTasks] = useState(0); // Total de tareas que coinciden con los filtros
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalTasks, setTotalTasks] = useState(0);
 
   const { data: session, status } = useSession();
   const userId = session?.user?.id;
+  const router = useRouter();
 
   // Efecto para implementar el debounce en la búsqueda
   useEffect(() => {
@@ -41,13 +48,20 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
     };
   }, [searchQuery]);
 
-  // Función para obtener las tareas (ahora con filtros y paginación)
+  // Función para obtener las tareas (ahora con filtros, ordenación y paginación)
   const fetchTasks = useCallback(async () => {
-    if (status === 'loading') return;
+    // Si la sesión está cargando, no hacer nada y mantener el estado de carga
+    if (status === 'loading') {
+      setIsLoading(true);
+      return;
+    }
+
+    // Si la sesión ya cargó y no hay userId (usuario no autenticado), redirigir
     if (!userId) {
-      setError('No se pudo cargar las tareas: Usuario no autenticado.');
+      setError('No se pudo cargar las tareas: Usuario no autenticado. Redirigiendo a login...');
       setIsLoading(false);
       setTasks([]);
+      router.push('/login');
       return;
     }
 
@@ -55,13 +69,16 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
     setError(null);
 
     try {
-      // Construir los parámetros de la URL para los filtros y paginación
+      // Construir los parámetros de la URL para los filtros, ordenación y paginación
       const params = new URLSearchParams();
       if (debouncedSearchQuery) params.append('search', debouncedSearchQuery);
       if (filterPriority) params.append('priority', filterPriority);
       if (filterDueDate) params.append('dueDate', filterDueDate);
+      if (filterIsCompleted) params.append('isCompleted', filterIsCompleted);
       params.append('page', currentPage.toString());
       params.append('limit', itemsPerPage.toString());
+      params.append('sortField', sortField);
+      params.append('sortOrder', sortOrder);
 
       const queryString = params.toString();
       const url = `/api/tasks${queryString ? `?${queryString}` : ''}`;
@@ -94,22 +111,18 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
 
       const result = await response.json();
       setTasks(result.tasks || []);
-      setTotalTasks(result.totalTasks || 0); // Actualizar el total de tareas
+      setTotalTasks(result.totalTasks || 0);
     } catch (err: any) {
       console.error('Error al obtener tareas:', err);
-      if (err instanceof SyntaxError && err.message.includes('JSON')) {
-        setError('Error de formato de datos del servidor. Intente de nuevo o contacte al soporte.');
-      } else {
-        setError(err.message || 'Ocurrió un error inesperado al cargar las tareas.');
-      }
+      setError(err.message || 'Ocurrió un error inesperado al cargar las tareas.');
       setTasks([]);
       setTotalTasks(0);
     } finally {
       setIsLoading(false);
     }
-  }, [userId, status, debouncedSearchQuery, filterPriority, filterDueDate, currentPage, itemsPerPage]); // Dependencias de filtros y paginación
+  }, [userId, status, debouncedSearchQuery, filterPriority, filterDueDate, filterIsCompleted, currentPage, itemsPerPage, sortField, sortOrder, router]);
 
-  // Efecto para cargar las tareas al montar el componente o cuando se activa el refreshTrigger o filtros/paginación
+  // Efecto para cargar las tareas al montar el componente o cuando se activa el refreshTrigger o filtros/paginación/ordenación
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks, refreshTrigger]);
@@ -130,7 +143,6 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
         throw new Error(errorData.message || 'Error al eliminar la tarea.');
       }
 
-      // Si la eliminación fue exitosa, refrescar la lista de tareas
       fetchTasks();
     } catch (err: any) {
       console.error('Error al eliminar tarea:', err);
@@ -183,7 +195,7 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
 
   const getPaginationButtons = () => {
     const buttons = [];
-    const maxButtons = 5; // Número máximo de botones de página a mostrar
+    const maxButtons = 5;
     let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
     let endPage = Math.min(totalPages, startPage + maxButtons - 1);
 
@@ -201,6 +213,7 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
               ? 'bg-blue-600 text-white dark:bg-blue-700'
               : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500'
           }`}
+          type="button"
         >
           {i}
         </button>
@@ -209,12 +222,15 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
     return buttons;
   };
 
-  // --- Función para limpiar todos los filtros ---
+  // --- Función para limpiar todos los filtros y ordenación ---
   const handleClearFilters = () => {
     setSearchQuery('');
     setFilterPriority('');
     setFilterDueDate('');
-    setCurrentPage(1); // Siempre volver a la primera página al limpiar filtros
+    setFilterIsCompleted('');
+    setSortField('createdAt');
+    setSortOrder('desc');
+    setCurrentPage(1);
   };
 
 
@@ -239,10 +255,10 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl font-sans text-gray-900 dark:text-white">
       <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-6">Mis Tareas</h2>
 
-      {/* Sección de Filtros */}
+      {/* Sección de Filtros y Ordenación */}
       <div className="mb-6 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700">
-        <h3 className="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">Filtros</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <h3 className="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">Filtros y Ordenación</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           <div>
             <label htmlFor="search" className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Buscar por Título/Descripción</label>
             <input
@@ -252,6 +268,9 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
               placeholder="Buscar tarea..."
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.preventDefault();
+              }}
             />
           </div>
           <div>
@@ -259,7 +278,7 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
             <select
               id="filterPriority"
               value={filterPriority}
-              onChange={(e) => { setFilterPriority(e.target.value); setCurrentPage(1); }} // Resetear página
+              onChange={(e) => { setFilterPriority(e.target.value); setCurrentPage(1); }}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
             >
               <option value="">Todas</option>
@@ -274,15 +293,64 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
               type="date"
               id="filterDueDate"
               value={filterDueDate}
-              onChange={(e) => { setFilterDueDate(e.target.value); setCurrentPage(1); }} // Resetear página
+              onChange={(e) => { setFilterDueDate(e.target.value); setCurrentPage(1); }}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
             />
           </div>
         </div>
+
+        {/* Nuevo filtro de Tareas Completadas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label htmlFor="filterIsCompleted" className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Estado</label>
+            <select
+              id="filterIsCompleted"
+              value={filterIsCompleted}
+              onChange={(e) => { setFilterIsCompleted(e.target.value); setCurrentPage(1); }}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
+            >
+              <option value="">Todas</option>
+              <option value="false">Pendientes</option>
+              <option value="true">Completadas</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Controles de Ordenación */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="sortField" className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Ordenar por</label>
+            <select
+              id="sortField"
+              value={sortField}
+              onChange={(e) => { setSortField(e.target.value); setCurrentPage(1); }}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
+            >
+              <option value="createdAt">Fecha de Creación</option>
+              <option value="due_date">Fecha de Vencimiento</option>
+              <option value="title">Título</option>
+              <option value="priority">Prioridad</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="sortOrder" className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Orden</label>
+            <select
+              id="sortOrder"
+              value={sortOrder}
+              onChange={(e) => { setSortOrder(e.target.value); setCurrentPage(1); }}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
+            >
+              <option value="asc">Ascendente</option>
+              <option value="desc">Descendente</option>
+            </select>
+          </div>
+        </div>
+
         <div className="mt-4 text-right">
           <button
             onClick={handleClearFilters}
             className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500 transition-colors"
+            type="button"
           >
             Limpiar Filtros
           </button>
@@ -345,12 +413,14 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
                 <button
                   onClick={() => onEditTask(task)}
                   className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
+                  type="button"
                 >
                   Editar
                 </button>
                 <button
                   onClick={() => handleDeleteTask(task.id)}
                   className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium"
+                  type="button"
                 >
                   Eliminar
                 </button>
@@ -367,6 +437,7 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
             onClick={handlePreviousPage}
             disabled={currentPage === 1}
             className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-800"
+            type="button"
           >
             Anterior
           </button>
@@ -377,6 +448,7 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
             onClick={handleNextPage}
             disabled={currentPage === totalPages}
             className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-800"
+            type="button"
           >
             Siguiente
           </button>

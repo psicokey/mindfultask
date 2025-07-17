@@ -195,9 +195,9 @@ export default function PomodoroTimer() {
           // No es el último ciclo de trabajo, pasar a descanso corto
           setMode('break');
           setMinutes(breakTime);
+          setSeconds(0); // Asegurarse de que los segundos se reinicien para el nuevo modo
           showCustomAlert('¡Tiempo de Descanso Corto!', 'info');
         }
-        setSeconds(0); // Asegurarse de que los segundos se reinicien para el nuevo modo
       } else if (mode === 'break') {
         // Acaba de terminar un descanso corto, siempre volver a trabajar
         setMode('work');
@@ -350,7 +350,8 @@ export default function PomodoroTimer() {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl max-w-md mx-auto font-sans text-gray-900 dark:text-white">
+    // Se ha cambiado max-w-md a max-w-sm para hacerlo menos ancho
+    <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl max-w-sm mx-auto font-sans text-gray-900 dark:text-white">
       {/* Alerta Personalizada */}
       {showAlert && (
         <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-md shadow-lg transition-all duration-300 ease-out transform ${
@@ -374,12 +375,14 @@ export default function PomodoroTimer() {
           className={`px-8 py-3 rounded-md text-lg font-semibold transition-transform transform hover:scale-105
             ${isActive ? 'bg-orange-500 hover:bg-orange-600' : 'bg-blue-500 hover:bg-blue-600'}
             text-white shadow-md`}
+          type="button" // Asegura que no envíe el formulario
         >
           {isActive ? 'Pausa' : 'Inicio'}
         </button>
         <button
           onClick={resetSession}
           className="px-8 py-3 bg-gray-500 text-white rounded-md font-semibold hover:bg-gray-600 transition-transform transform hover:scale-105 shadow-md"
+          type="button" // Asegura que no envíe el formulario
         >
           Reiniciar Sesión
         </button>
