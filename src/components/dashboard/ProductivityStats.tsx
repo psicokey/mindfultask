@@ -31,7 +31,7 @@ interface ProductivityStatsData {
   totalPomodoroSessions: number;
   totalPomodoroDurationMinutes: number;
   totalPomodoroCycles: number;
-  weeklyTrend: number[]; // Datos de tareas completadas por día de la semana
+  weeklyTrend: number[];
 }
 
 export default function ProductivityStats() {
@@ -40,7 +40,7 @@ export default function ProductivityStats() {
   const [error, setError] = useState<string | null>(null);
 
   const { data: session, status } = useSession();
-  const userId = session?.user?.id;
+  const userId = session?.user?.id; // userId es String
 
   const fetchProductivityStats = useCallback(async () => {
     if (status === 'loading') {
@@ -115,25 +115,22 @@ export default function ProductivityStats() {
     );
   }
 
-  // Configuración del gráfico de barras
   const labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-  const todayDayOfWeek = (new Date().getDay() === 0) ? 6 : new Date().getDay() - 1; // 0=Lun, 6=Dom
+  const todayDayOfWeek = (new Date().getDay() === 0) ? 6 : new Date().getDay() - 1;
 
-  // Reordenar weeklyTrend para que coincida con las etiquetas Lun-Dom
-  // La API devuelve weeklyTrend[0] como hoy, weeklyTrend[1] como ayer, etc.
   const orderedWeeklyTrend = new Array(7).fill(0);
   for (let i = 0; i < 7; i++) {
-    const dayIndexInLabels = (todayDayOfWeek - i + 7) % 7; // Calcula el índice del día de la semana para la etiqueta
-    orderedWeeklyTrend[dayIndexInLabels] = stats.weeklyTrend[i] || 0; // Asigna el valor de la API al día correcto
+    const dayIndexInLabels = (todayDayOfWeek - i + 7) % 7;
+    orderedWeeklyTrend[dayIndexInLabels] = stats.weeklyTrend[i] || 0;
   }
 
   const data = {
-    labels: labels, // Usar etiquetas fijas Lun-Dom
+    labels: labels,
     datasets: [
       {
         label: 'Tareas completadas',
-        data: orderedWeeklyTrend, // Usar los datos reordenados
-        backgroundColor: 'rgba(79, 70, 229, 0.8)', // blue-600
+        data: orderedWeeklyTrend,
+        backgroundColor: 'rgba(79, 70, 229, 0.8)',
         borderColor: 'rgba(79, 70, 229, 1)',
         borderWidth: 1,
         borderRadius: 4,
@@ -143,18 +140,18 @@ export default function ProductivityStats() {
 
   const options = {
     responsive: true,
-    maintainAspectRatio: false, // Permite que el gráfico se ajuste al contenedor
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: 'top' as const,
         labels: {
-          color: 'rgb(107 114 128)' // Tailwind gray-500
+          color: 'rgb(107 114 128)'
         }
       },
       title: {
         display: true,
         text: 'Productividad semanal',
-        color: 'rgb(17 24 39)' // Tailwind gray-900
+        color: 'rgb(17 24 39)'
       },
       tooltip: {
         backgroundColor: 'rgba(0,0,0,0.7)',
@@ -165,25 +162,24 @@ export default function ProductivityStats() {
     scales: {
       x: {
         ticks: {
-          color: 'rgb(107 114 128)' // Tailwind gray-500
+          color: 'rgb(107 114 128)'
         },
         grid: {
-          color: 'rgba(209, 213, 219, 0.1)' // gray-300 con opacidad para dark mode
+          color: 'rgba(209, 213, 219, 0.1)'
         }
       },
       y: {
         ticks: {
-          color: 'rgb(107 114 128)', // Tailwind gray-500
-          stepSize: 1, // Para asegurar que los ticks sean enteros
-          beginAtZero: true, // Asegura que el eje Y comience en 0
+          color: 'rgb(107 114 128)',
+          stepSize: 1,
+          beginAtZero: true,
         },
         grid: {
-          color: 'rgba(209, 213, 219, 0.1)' // gray-300 con opacidad para dark mode
+          color: 'rgba(209, 213, 219, 0.1)'
         }
       }
     }
   };
-
 
   return (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl font-sans text-gray-900 dark:text-white">
@@ -208,8 +204,7 @@ export default function ProductivityStats() {
         </div>
       </div>
       
-      {/* Sección del Gráfico de Productividad Semanal */}
-      <div className="mb-6 h-64"> {/* Altura fija para el gráfico */}
+      <div className="mb-6 h-64">
         <Bar data={data} options={options} />
       </div>
       
@@ -218,7 +213,7 @@ export default function ProductivityStats() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg shadow-sm">
             <p className="text-sm text-gray-600 dark:text-gray-400">Sesiones Pomodoro</p>
-            <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{stats.totalPomodoroSessions}</p>
+            <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{stats.totalPomodoroCycles}</p>
           </div>
           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg shadow-sm">
             <p className="text-sm text-gray-600 dark:text-gray-400">Tiempo Enfocado (min)</p>

@@ -2,20 +2,20 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react'; // Importa useSession
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { FaTasks, FaCheckCircle, FaRunning, FaRegClock, FaRegCalendarAlt, FaRegLightbulb } from 'react-icons/fa';
-import { Pie } from 'react-chartjs-2'; // Solo Pie es necesario ahora
+import { Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
-  ArcElement, // Necesario para Pie Chart
+  ArcElement,
   Title,
   Tooltip,
   Legend,
 } from 'chart.js';
 import { motion } from 'framer-motion';
+import { useDashboardContext } from 'app/components/dashboard/DashboardContext';
 
-// Registrar componentes de Chart.js
 ChartJS.register(
   ArcElement,
   Title,
@@ -23,33 +23,32 @@ ChartJS.register(
   Legend
 );
 
-// Interfaz que coincide con el modelo Task de Prisma
 interface Task {
   id: number;
   title: string;
   description: string | null;
-  due_date: Date | null; // Prisma devuelve Date objetos
-  priority: 'low' | 'medium' | 'high'; // Prioridades de tu schema.prisma
-  is_completed: boolean; // Coincide con Prisma
-  userId: number;
+  due_date: Date | null;
+  priority: 'low' | 'medium' | 'high';
+  is_completed: boolean;
+  userId: string; // userId es String
   createdAt: Date;
   updatedAt: Date;
 }
 
 interface TaskSummaryProps {
-  // Ya no necesitamos userId como prop, lo obtenemos con useSession
-  // userId: number;
-  onEditTask?: (task: Task) => void; // Prop para la función de edición
+  // No se necesitan props, los handlers vienen del contexto
 }
 
-const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
+const TaskSummary: React.FC<TaskSummaryProps> = () => {
+  const { handleOpenEditTaskModal } = useDashboardContext();
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'productivity' | 'wellbeing'>('productivity');
 
   const { data: session, status } = useSession();
-  const userId = session?.user?.id;
+  const userId = session?.user?.id; // userId es String
 
   const fetchTasksData = useCallback(async () => {
     if (status === 'loading') {
@@ -67,14 +66,14 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
     setError(null);
 
     try {
-      const response = await fetch(`/api/tasks?userId=${userId}`, { // Asegúrate de que tu API de tareas pueda filtrar por userId
+      const response = await fetch(`/api/tasks?userId=${userId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-      if (response.status === 204) { // No Content
+      if (response.status === 204) {
         setTasks([]);
         setIsLoading(false);
         return;
@@ -91,7 +90,6 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
       }
 
       const result = await response.json();
-      // Asegúrate de que las fechas se conviertan a objetos Date si no lo están ya
       const fetchedTasks: Task[] = result.tasks.map((task: any) => ({
         ...task,
         due_date: task.due_date ? new Date(task.due_date) : null,
@@ -113,7 +111,6 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
   }, [fetchTasksData]);
 
 
-  // Estadísticas calculadas
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(task => task.is_completed).length;
   const pendingTasks = tasks.filter(task => !task.is_completed).length;
@@ -123,9 +120,8 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
     new Date(task.due_date) < new Date()
   ).length;
 
-  // Datos para gráfico de prioridades
   const priorityData = {
-    labels: ['Baja', 'Media', 'Alta'], // Coincide con tus prioridades de Prisma
+    labels: ['Baja', 'Media', 'Alta'],
     datasets: [
       {
         data: [
@@ -134,9 +130,9 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
           tasks.filter(t => t.priority === 'high').length,
         ],
         backgroundColor: [
-          'rgba(20, 184, 166, 0.7)',  // teal para baja
-          'rgba(59, 130, 246, 0.7)',  // azul para media
-          'rgba(239, 68, 68, 0.7)',   // rojo para alta
+          'rgba(20, 184, 166, 0.7)',
+          'rgba(59, 130, 246, 0.7)',
+          'rgba(239, 68, 68, 0.7)',
         ],
         borderColor: [
           'rgba(20, 184, 166, 1)',
@@ -148,7 +144,6 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
     ],
   };
 
-  // Consejos basados en estadísticas
   const getWellbeingTips = () => {
     const highPriorityPending = tasks.filter(t => t.priority === 'high' && !t.is_completed).length;
     const completionRate = totalTasks > 0 ? completedTasks / totalTasks : 0;
@@ -207,7 +202,6 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
-      {/* Pestañas */}
       <div className="border-b border-gray-200 dark:border-gray-700">
         <nav className="flex">
           <button
@@ -227,13 +221,11 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
         </nav>
       </div>
 
-      {/* Contenido de las pestañas */}
       <div className="p-6">
         {activeTab === 'productivity' ? (
           <>
-            {/* Resumen rápido */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
@@ -246,7 +238,7 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
                 <p className="text-2xl font-bold mt-1">{totalTasks}</p>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
@@ -259,7 +251,7 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
                 <p className="text-2xl font-bold mt-1">{completedTasks}</p>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
@@ -272,7 +264,7 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
                 <p className="text-2xl font-bold mt-1">{pendingTasks}</p>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
@@ -286,12 +278,11 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
               </motion.div>
             </div>
 
-            {/* Gráfico de Distribución por Prioridad */}
             <div className="mb-8">
               <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-4 text-center">Distribución por prioridad</h3>
-              <div className="h-64 flex justify-center items-center"> {/* Centrar el gráfico */}
+              <div className="h-64 flex justify-center items-center">
                 {totalTasks > 0 ? (
-                  <Pie 
+                  <Pie
                     data={priorityData}
                     options={{
                       responsive: true,
@@ -300,11 +291,11 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
                         legend: {
                           position: 'bottom',
                           labels: {
-                            color: 'rgb(107 114 128)', // Tailwind gray-500
+                            color: 'rgb(107 114 128)',
                           },
                         },
                         title: {
-                          display: false, // El título ya está arriba
+                          display: false,
                         },
                         tooltip: {
                           backgroundColor: 'rgba(0,0,0,0.7)',
@@ -317,27 +308,6 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
                 ) : (
                   <p className="text-gray-600 dark:text-gray-400">No hay tareas para mostrar la distribución por prioridad.</p>
                 )}
-              </div>
-            </div>
-            <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-              <div className="flex items-start">
-                <FaRegCalendarAlt className="text-purple-600 dark:text-purple-400 mt-1 mr-3 flex-shrink-0" />
-                <div>
-                  <h4 className="font-medium mb-2">Ritmo de trabajo</h4>
-                  <p className="text-sm">
-                    {totalTasks === 0 
-                      ? "Aún no tienes tareas. ¡Es un buen momento para añadir algunas y empezar a organizar!" 
-                      : `Has completado ${completedTasks} tareas (${Math.round((completedTasks / totalTasks) * 100)}% de tu lista).`}
-                  </p>
-                  {totalTasks > 0 && (
-                    <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                      <div 
-                        className="bg-purple-600 dark:bg-purple-400 h-2.5 rounded-full" 
-                        style={{ width: `${(completedTasks / totalTasks) * 100}%` }}
-                      ></div>
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           </>
@@ -362,6 +332,27 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ onEditTask = () => {} }) => {
               </div>
             </div>
 
+            <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+              <div className="flex items-start">
+                <FaRegCalendarAlt className="text-purple-600 dark:text-purple-400 mt-1 mr-3 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium mb-2">Ritmo de trabajo</h4>
+                  <p className="text-sm">
+                    {totalTasks === 0
+                      ? "Aún no tienes tareas. ¡Es un buen momento para añadir algunas y empezar a organizar!"
+                      : `Has completado ${completedTasks} tareas (${Math.round((completedTasks / totalTasks) * 100)}% de tu lista).`}
+                  </p>
+                  {totalTasks > 0 && (
+                    <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                      <div
+                        className="bg-purple-600 dark:bg-purple-400 h-2.5 rounded-full"
+                        style={{ width: `${(completedTasks / totalTasks) * 100}%` }}
+                      ></div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
 
             <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
               <div className="flex items-start">

@@ -7,20 +7,14 @@ export async function POST(req: Request) {
 
   // Verificar si el usuario ya existe
   const existingUser = await db.user.findUnique({
-    where: { email: email },
+    where: { email },
   });
-
   if (existingUser) {
-    ([email]
-  );
-
-  if (existingUser.email.length > 0) {
     return NextResponse.json(
-      { message: 'El usuario ya existe' },
-      { status: 400 }
+      { message: 'Usuario invalido' },
+      { status: 409 }
     );
-  }}
-
+  }
   // Crear usuario
   const hashedPassword = await hashPassword(password);
   if (!hashedPassword) {

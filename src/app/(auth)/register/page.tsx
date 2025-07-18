@@ -103,14 +103,14 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 font-sans">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-xl shadow-lg p-8">
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
               Crea tu cuenta
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
               Empieza a organizar tus tareas de manera consciente
             </p>
           </div>
@@ -242,32 +242,14 @@ export default function RegisterPage() {
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-white text-gray-500">
-                  O regístrate con
                 </span>
               </div>
             </div>
             
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                className="w-full inline-flex justify-center items-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                <FcGoogle className="text-xl mr-2" />
-                Google
-              </button>
-              
-              <button
-                type="button"
-                className="w-full inline-flex justify-center items-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                <FiGithub className="text-xl mr-2" />
-                GitHub
-              </button>
-            </div>
           </div>
           
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               ¿Ya tienes una cuenta?{' '}
               <Link 
                 href="/login" 

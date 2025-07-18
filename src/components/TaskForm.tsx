@@ -3,19 +3,17 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { Task } from '@prisma/client'; // Importa el tipo Task
+import { Task } from '@prisma/client';
 
 interface TaskFormProps {
-  onTaskCreated?: () => void; // Callback para cuando se crea una tarea
-  onTaskUpdated?: () => void; // Callback para cuando se actualiza una tarea
-  initialTask?: Task | null; // Prop opcional para la tarea a editar
+  onTaskCreated?: () => void;
+  onTaskUpdated?: () => void;
+  initialTask?: Task | null;
 }
 
 export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: TaskFormProps) {
-  // Los estados se inicializan con los valores de initialTask o con valores por defecto
   const [title, setTitle] = useState(initialTask?.title || '');
   const [description, setDescription] = useState(initialTask?.description || '');
-  // Formatear la fecha para el input type="date" (YYYY-MM-DD)
   const [dueDate, setDueDate] = useState(
     initialTask?.due_date ? new Date(initialTask.due_date).toISOString().split('T')[0] : ''
   );
@@ -26,10 +24,8 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
   const [success, setSuccess] = useState<string | null>(null);
 
   const { data: session } = useSession();
-  const userId = session?.user?.id;
+  const userId = session?.user?.id; // userId es String
 
-  // Efecto para actualizar los campos del formulario si initialTask cambia
-  // Esto es crucial cuando el modal de edición se reutiliza para diferentes tareas
   useEffect(() => {
     setTitle(initialTask?.title || '');
     setDescription(initialTask?.description || '');
@@ -38,7 +34,7 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
     setIsCompleted(initialTask?.is_completed || false);
     setError(null);
     setSuccess(null);
-  }, [initialTask]); // Se ejecuta cada vez que la prop initialTask cambia
+  }, [initialTask]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -60,14 +56,13 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
     const taskData = {
       title: title.trim(),
       description: description ? description.trim() : null,
-      dueDate: dueDate ? new Date(dueDate).toISOString() : null, // Asegura formato ISO para el backend
+      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
       priority,
       is_completed: isCompleted,
-      userId: parseInt(userId), // Asegura que el userId se envíe como número
+      userId: userId, // userId es String
     };
 
     try {
-      // Determina si es una creación (POST) o una actualización (PUT)
       const method = initialTask ? 'PUT' : 'POST';
       const url = initialTask ? `/api/tasks/${initialTask.id}` : '/api/tasks';
 
@@ -88,18 +83,17 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
       setSuccess(`Tarea ${initialTask ? 'actualizada' : 'creada'} con éxito!`);
 
       if (!initialTask) {
-        // Limpiar formulario solo si es una nueva tarea
         setTitle('');
         setDescription('');
         setDueDate('');
         setPriority('medium');
         setIsCompleted(false);
         if (onTaskCreated) {
-          onTaskCreated(); // Llamar callback de creación
+          onTaskCreated();
         }
       } else {
         if (onTaskUpdated) {
-          onTaskUpdated(); // Llamar callback de actualización
+          onTaskUpdated();
         }
       }
       console.log(`Tarea ${initialTask ? 'actualizada' : 'creada'}:`, result.task);
@@ -176,7 +170,7 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
           </select>
         </div>
 
-        {initialTask && ( // Solo muestra el checkbox de completado en modo edición
+        {initialTask && (
           <div>
             <label htmlFor="isCompleted" className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 cursor-pointer">
               <input

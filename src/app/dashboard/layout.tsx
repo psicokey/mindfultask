@@ -12,7 +12,7 @@ export default async function DashboardLayout({
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
-    redirect('/auth/login');
+    redirect('/login');
   }
 
   // Pasa la sesión del usuario al componente de layout de cliente

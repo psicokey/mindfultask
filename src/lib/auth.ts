@@ -50,7 +50,7 @@ export const authOptions: AuthOptions = {
         // Si la autenticación es exitosa, devuelve un objeto User.
         // Asegúrate de que el id sea un string, ya que NextAuth lo espera así.
         return {
-          id: user.user_id.toString(), // Convierte el ID de Prisma a string
+          id: user.id.toString(), // Asegúrate de que el ID sea un string
           name: user.name, // Asume que tu tabla 'User' tiene un campo 'name'
           email: user.email
         } as User;
@@ -95,7 +95,7 @@ export const authOptions: AuthOptions = {
     }
   },
   pages: {
-    signIn: '/auth/login' // Ruta personalizada para la página de inicio de sesión
+    signIn: '/login' // Ruta personalizada para la página de inicio de sesión
   },
   // La clave secreta principal para firmar tokens y cifrar datos.
   // Es crucial que sea una cadena larga y aleatoria.

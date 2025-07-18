@@ -1,9 +1,9 @@
 // app/api/productivity/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from 'app/lib/auth';
+import { authOptions } from 'app/app/api/auth/[...nextauth]/route'; // Asegúrate de que la ruta sea correcta
 import prisma from 'app/lib/prisma';
-import { Prisma } from '@prisma/client';
+
 
 export async function GET(request: NextRequest) {
   console.log('API /api/productivity (GET) ha sido llamada.');
@@ -15,11 +15,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: 'No autorizado' }, { status: 401 });
   }
 
-  const userId = parseInt(session.user.id);
-  if (isNaN(userId)) {
-    console.error('GET /api/productivity: userId inválido de la sesión:', session.user.id);
-    return NextResponse.json({ message: 'ID de usuario inválido.' }, { status: 400 });
-  }
+  // userId ahora es un String
+  const userId = session.user.id;
+  // No necesitas parseInt(userId) aquí
 
   try {
     // 1. Obtener estadísticas de tareas
@@ -55,12 +53,10 @@ export async function GET(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Normalizar a inicio del día
 
-    // Obtener tareas completadas en los últimos 7 días
     const tasksLast7Days = await prisma.task.findMany({
       where: {
         userId: userId,
         is_completed: true,
-        // Filtrar por tareas completadas en los últimos 7 días (incluyendo hoy)
         updatedAt: {
           gte: new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000), // 6 días atrás desde hoy
         },
@@ -74,17 +70,9 @@ export async function GET(request: NextRequest) {
       const taskDate = new Date(task.updatedAt);
       taskDate.setHours(0, 0, 0, 0);
 
-      // Calcular la diferencia en días desde hoy
-      const diffTime = Math.abs(today.getTime() - taskDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Días de diferencia
-
-      // El índice del día de la semana (0=Domingo, 1=Lunes, etc.)
-      // Queremos que Lun sea el índice 0, Mar 1, etc.
       let dayOfWeek = taskDate.getDay(); // 0 (Domingo) a 6 (Sábado)
       dayOfWeek = (dayOfWeek === 0) ? 6 : dayOfWeek - 1; // Convertir a 0=Lun, 6=Dom
 
-      // Ajustar el índice para que el día actual sea el último en el array de 7 días
-      // Y los días anteriores se mapeen correctamente
       const todayDayOfWeek = (today.getDay() === 0) ? 6 : today.getDay() - 1;
       const index = (dayOfWeek - todayDayOfWeek + 7) % 7;
 
@@ -98,10 +86,10 @@ export async function GET(request: NextRequest) {
       completedTasks,
       pendingTasks: totalTasks - completedTasks,
       completionRate: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0,
-      totalPomodoroSessions: pomodoroSessions.length,
+      totalPomodoroDurationSeconds,
       totalPomodoroDurationMinutes,
       totalPomodoroCycles,
-      weeklyTrend, // Incluir la tendencia semanal
+      weeklyTrend,
     }, { status: 200 });
 
   } catch (error) {

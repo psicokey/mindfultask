@@ -1,65 +1,76 @@
 // app/api/tasks/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from 'app/lib/auth';
+import { authOptions } from 'app/app/api/auth/[...nextauth]/route'; // Importa tus opciones de autenticación de NextAuth
 import prisma from 'app/lib/prisma';
+import { Prisma } from '@prisma/client';
 
-// Helper para obtener el ID de la tarea de los parámetros de la URL
-function getTaskId(params: { id: string }): number | null {
-  const taskId = parseInt(params.id, 10);
-  return isNaN(taskId) ? null : taskId;
-}
+// Nota: La función GET para /api/tasks (sin ID específico) está en el mismo archivo
+// si no tienes un archivo separado para /api/tasks/route.ts.
+// Si tienes un archivo separado, asegúrate de que este archivo solo contenga
+// las operaciones para el ID específico (GET, PUT, DELETE).
 
-// --- Método GET: Obtener una sola tarea (útil para la edición si se carga por ID) ---
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  console.log(`API /api/tasks/${params.id} (GET) ha sido llamada.`);
+
   const session = await getServerSession(authOptions);
+
   if (!session || !session.user || !session.user.id) {
+    console.warn(`GET /api/tasks/${params.id}: Intento no autorizado.`);
     return NextResponse.json({ message: 'No autorizado' }, { status: 401 });
   }
 
-  const userId = parseInt(session.user.id);
-  const taskId = getTaskId(params);
+  const userId = session.user.id;
+  const taskId = parseInt(params.id, 10); // Acceso directo a params.id
 
-  if (taskId === null) {
+  if (isNaN(taskId)) {
+    console.error(`GET /api/tasks/${params.id}: ID de tarea inválido: ${params.id}`);
     return NextResponse.json({ message: 'ID de tarea inválido.' }, { status: 400 });
   }
 
   try {
     const task = await prisma.task.findUnique({
-      where: {
-        id: taskId,
-        userId: userId, // Asegura que solo el propietario pueda ver la tarea
-      },
+      where: { id: taskId },
     });
 
     if (!task) {
-      return NextResponse.json({ message: 'Tarea no encontrada o no pertenece al usuario.' }, { status: 404 });
+      console.warn(`GET /api/tasks/${params.id}: Tarea no encontrada.`);
+      return NextResponse.json({ message: 'Tarea no encontrada.' }, { status: 404 });
     }
 
-    return NextResponse.json({ task }, { status: 200 });
+    // Asegurarse de que el usuario solo pueda ver sus propias tareas
+    if (task.userId !== userId) {
+      console.warn(`GET /api/tasks/${params.id}: Acceso denegado. El usuario ${userId} intentó acceder a la tarea de otro usuario (${task.userId}).`);
+      return NextResponse.json({ message: 'No autorizado para ver esta tarea.' }, { status: 403 });
+    }
+
+    console.log(`GET /api/tasks/${params.id}: Tarea encontrada con éxito:`, task.id);
+    return NextResponse.json(task, { status: 200 });
+
   } catch (error) {
-    console.error(`GET /api/tasks/${taskId}: Error al obtener la tarea:`, error);
-    return NextResponse.json({ message: 'Error interno del servidor.' }, { status: 500 });
+    console.error(`GET /api/tasks/${params.id}: Error al obtener la tarea:`, error);
+    if (error instanceof Error) {
+      return NextResponse.json({ message: `Error interno del servidor: ${error.message}` }, { status: 500 });
+    }
+    return NextResponse.json({ message: 'Error interno del servidor' }, { status: 500 });
   }
 }
 
-// --- Método PUT: Actualizar una tarea existente ---
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  console.log(`API /api/tasks/${params.id} (PUT) ha sido llamada.`);
+
   const session = await getServerSession(authOptions);
+
   if (!session || !session.user || !session.user.id) {
+    console.warn(`PUT /api/tasks/${params.id}: Intento no autorizado.`);
     return NextResponse.json({ message: 'No autorizado' }, { status: 401 });
   }
 
-  const userId = parseInt(session.user.id);
-  const taskId = getTaskId(params);
+  const userId = session.user.id;
+  const taskId = parseInt(params.id, 10); // Acceso directo a params.id
 
-  if (taskId === null) {
+  if (isNaN(taskId)) {
+    console.error(`PUT /api/tasks/${params.id}: ID de tarea inválido: ${params.id}`);
     return NextResponse.json({ message: 'ID de tarea inválido.' }, { status: 400 });
   }
 
@@ -67,102 +78,98 @@ export async function PUT(
     const body = await request.json();
     const { title, description, dueDate, priority, is_completed } = body;
 
-    // Validaciones básicas (puedes expandirlas)
-    if (!title || typeof title !== 'string' || title.trim() === '') {
-      return NextResponse.json({ message: 'El título de la tarea es obligatorio.' }, { status: 400 });
-    }
-    if (description !== null && description !== undefined && typeof description !== 'string') {
-      return NextResponse.json({ message: 'La descripción debe ser una cadena de texto o nula.' }, { status: 400 });
-    }
-    if (dueDate !== null && dueDate !== undefined && typeof dueDate !== 'string') {
-      return NextResponse.json({ message: 'La fecha de vencimiento debe ser una cadena de texto ISO o nula.' }, { status: 400 });
-    }
-    if (is_completed !== null && is_completed !== undefined && typeof is_completed !== 'boolean') {
-      return NextResponse.json({ message: 'El estado de completado debe ser un booleano.' }, { status: 400 });
-    }
-
-    // Asegurarse de que la tarea pertenezca al usuario antes de actualizar
     const existingTask = await prisma.task.findUnique({
-      where: {
-        id: taskId,
-        userId: userId,
-      },
+      where: { id: taskId },
     });
 
     if (!existingTask) {
-      return NextResponse.json({ message: 'Tarea no encontrada o no pertenece al usuario.' }, { status: 404 });
+      console.warn(`PUT /api/tasks/${params.id}: Tarea no encontrada.`);
+      return NextResponse.json({ message: 'Tarea no encontrada.' }, { status: 404 });
+    }
+
+    if (existingTask.userId !== userId) {
+      console.warn(`PUT /api/tasks/${params.id}: Acceso denegado. El usuario ${userId} intentó actualizar la tarea de otro usuario (${existingTask.userId}).`);
+      return NextResponse.json({ message: 'No autorizado para actualizar esta tarea.' }, { status: 403 });
+    }
+
+    const dataToUpdate: any = {
+      title: title?.trim(),
+      description: description ? description.trim() : null,
+      priority: priority,
+      is_completed: is_completed,
+    };
+
+    if (dueDate) {
+      dataToUpdate.due_date = new Date(dueDate);
+    } else if (dueDate === null) {
+      dataToUpdate.due_date = null;
     }
 
     const updatedTask = await prisma.task.update({
-      where: {
-        id: taskId,
-      },
-      data: {
-        title: title.trim(),
-        description: description ? description.trim() : null,
-        due_date: dueDate ? new Date(dueDate) : null,
-        priority: priority || 'medium',
-        is_completed: is_completed,
-        // updatedAt se actualiza automáticamente por @updatedAt en Prisma
-      },
+      where: { id: taskId },
+      data: dataToUpdate,
     });
 
+    console.log(`PUT /api/tasks/${params.id}: Tarea actualizada con éxito:`, updatedTask.id);
     return NextResponse.json({
       message: 'Tarea actualizada con éxito',
       task: updatedTask,
     }, { status: 200 });
 
   } catch (error) {
-    console.error(`PUT /api/tasks/${taskId}: Error al actualizar la tarea:`, error);
+    console.error(`PUT /api/tasks/${params.id}: Error al actualizar la tarea:`, error);
     if (error instanceof Error) {
       return NextResponse.json({ message: `Error interno del servidor: ${error.message}` }, { status: 500 });
     }
-    return NextResponse.json({ message: 'Error interno del servidor.' }, { status: 500 });
+    return NextResponse.json({ message: 'Error interno del servidor' }, { status: 500 });
   }
 }
 
-// --- Método DELETE: Eliminar una tarea ---
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  console.log(`API /api/tasks/${params.id} (DELETE) ha sido llamada.`);
+
   const session = await getServerSession(authOptions);
+
   if (!session || !session.user || !session.user.id) {
+    console.warn(`DELETE /api/tasks/${params.id}: Intento no autorizado.`);
     return NextResponse.json({ message: 'No autorizado' }, { status: 401 });
   }
 
-  const userId = parseInt(session.user.id);
-  const taskId = getTaskId(params);
+  const userId = session.user.id;
+  const taskId = parseInt(params.id, 10); // Acceso directo a params.id
 
-  if (taskId === null) {
+  if (isNaN(taskId)) {
+    console.error(`DELETE /api/tasks/${params.id}: ID de tarea inválido: ${params.id}`);
     return NextResponse.json({ message: 'ID de tarea inválido.' }, { status: 400 });
   }
 
   try {
-    // Asegurarse de que la tarea pertenezca al usuario antes de eliminar
     const existingTask = await prisma.task.findUnique({
-      where: {
-        id: taskId,
-        userId: userId,
-      },
+      where: { id: taskId },
     });
 
     if (!existingTask) {
-      return NextResponse.json({ message: 'Tarea no encontrada o no pertenece al usuario.' }, { status: 404 });
+      console.warn(`DELETE /api/tasks/${params.id}: Tarea no encontrada.`);
+      return NextResponse.json({ message: 'Tarea no encontrada.' }, { status: 404 });
+    }
+
+    if (existingTask.userId !== userId) {
+      console.warn(`DELETE /api/tasks/${params.id}: Acceso denegado. El usuario ${userId} intentó eliminar la tarea de otro usuario (${existingTask.userId}).`);
+      return NextResponse.json({ message: 'No autorizado para eliminar esta tarea.' }, { status: 403 });
     }
 
     await prisma.task.delete({
-      where: {
-        id: taskId,
-      },
+      where: { id: taskId },
     });
 
+    console.log(`DELETE /api/tasks/${params.id}: Tarea eliminada con éxito:`, taskId);
     return NextResponse.json({ message: 'Tarea eliminada con éxito.' }, { status: 200 });
+
   } catch (error) {
-    console.error(`DELETE /api/tasks/${taskId}: Error al eliminar la tarea:`, error);
+    console.error(`DELETE /api/tasks/${params.id}: Error al eliminar la tarea:`, error);
     if (error instanceof Error) {
       return NextResponse.json({ message: `Error interno del servidor: ${error.message}` }, { status: 500 });
     }
-    return NextResponse.json({ message: 'Error interno del servidor.' }, { status: 500 });
+    return NextResponse.json({ message: 'Error interno del servidor' }, { status: 500 });
   }
 }

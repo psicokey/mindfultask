@@ -1,8 +1,8 @@
 // app/api/tasks/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from 'app/lib/auth'; // Ruta corregida
-import prisma from 'app/lib/prisma'; // Ruta corregida
+import { authOptions } from 'app/app/api/auth/[...nextauth]/route'; // Asegúrate de que la ruta sea correcta
+import prisma from 'app/lib/prisma';
 import { Prisma } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
@@ -15,11 +15,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'No autorizado' }, { status: 401 });
   }
 
-  const userId = parseInt(session.user.id);
-  if (isNaN(userId)) {
-    console.error('POST /api/tasks: userId inválido de la sesión:', session.user.id);
-    return NextResponse.json({ message: 'ID de usuario inválido.' }, { status: 400 });
-  }
+  // userId ahora es un String
+  const userId = session.user.id; 
+  // No necesitas parseInt(userId) aquí si userId en Prisma es String
 
   try {
     const body = await request.json();
@@ -40,7 +38,7 @@ export async function POST(request: NextRequest) {
       title: title.trim(),
       description: description ? description.trim() : null,
       priority: priority || 'medium',
-      userId: userId,
+      userId: userId, // userId es String
     };
 
     if (dueDate) {
@@ -66,7 +64,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Método GET para obtener tareas (ahora con filtros y paginación)
 export async function GET(request: NextRequest) {
   console.log('API /api/tasks (GET) ha sido llamada.');
 
@@ -77,52 +74,44 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: 'No autorizado' }, { status: 401 });
   }
 
-  const userId = parseInt(session.user.id);
-  if (isNaN(userId)) {
-    console.error('GET /api/tasks: userId inválido de la sesión:', session.user.id);
-    return NextResponse.json({ message: 'ID de usuario inválido.' }, { status: 400 });
-  }
+  // userId ahora es un String
+  const userId = session.user.id;
+  // No necesitas parseInt(userId) aquí
 
   try {
     const { searchParams } = new URL(request.url);
     const searchQuery = searchParams.get('search');
     const filterPriority = searchParams.get('priority');
     const filterDueDate = searchParams.get('dueDate');
-    const filterIsCompleted = searchParams.get('isCompleted'); // Correcto: 'isCompleted'
+    const filterIsCompleted = searchParams.get('isCompleted');
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '10', 10);
-    const sortField = searchParams.get('sortField') || 'createdAt'; // Correcto: 'sortField'
-    const sortOrder = searchParams.get('sortOrder') || 'desc'; // Correcto: 'sortOrder'
+    const sortField = searchParams.get('sortField') || 'createdAt';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
 
     const skip = (page - 1) * limit;
 
     const whereClause: Prisma.TaskWhereInput = {
-      userId: userId,
+      userId: userId, // userId es String
     };
 
-    // Filtrar por búsqueda de texto (título o descripción)
     if (searchQuery) {
-      // No usar .toLowerCase() aquí, Prisma ya lo maneja con 'insensitive' si la DB lo soporta
-      // o se basa en la intercalación de la columna.
       whereClause.OR = [
         { title: { contains: searchQuery } },
         { description: { contains: searchQuery } },
       ];
     }
 
-    // Filtrar por prioridad
     if (filterPriority && ['low', 'medium', 'high'].includes(filterPriority)) {
       whereClause.priority = filterPriority;
     }
 
-    // Filtrar por estado de completado
     if (filterIsCompleted === 'true') {
       whereClause.is_completed = true;
     } else if (filterIsCompleted === 'false') {
       whereClause.is_completed = false;
     }
 
-    // Filtrar por fecha de vencimiento
     if (filterDueDate) {
       const date = new Date(filterDueDate);
       if (!isNaN(date.getTime())) {
@@ -138,21 +127,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Construir el objeto de ordenación dinámicamente
     const orderByClause: Prisma.TaskOrderByWithRelationInput = {};
     const validSortFields = ['createdAt', 'due_date', 'title', 'priority', 'is_completed'];
     if (validSortFields.includes(sortField)) {
-      // Asignar el campo y el orden dinámicamente
       orderByClause[sortField as keyof Prisma.TaskOrderByWithRelationInput] = sortOrder as 'asc' | 'desc';
     } else {
-      // Valor por defecto si el campo de ordenación no es válido
       orderByClause.createdAt = 'desc';
     }
 
     const [tasks, totalTasks] = await prisma.$transaction([
       prisma.task.findMany({
         where: whereClause,
-        orderBy: orderByClause, // Usar el objeto de ordenación dinámico
+        orderBy: orderByClause,
         skip: skip,
         take: limit,
       }),
@@ -166,6 +152,126 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('GET /api/tasks: Error al obtener las tareas:', error);
+    if (error instanceof Error) {
+      return NextResponse.json({ message: `Error interno del servidor: ${error.message}` }, { status: 500 });
+    }
+    return NextResponse.json({ message: 'Error interno del servidor' }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  console.log(`API /api/tasks/${params.id} (PUT) ha sido llamada.`);
+
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user || !session.user.id) {
+    console.warn(`PUT /api/tasks/${params.id}: Intento no autorizado.`);
+    return NextResponse.json({ message: 'No autorizado' }, { status: 401 });
+  }
+
+  const userId = session.user.id; // userId es String
+  const taskId = parseInt(params.id, 10); // El ID de la tarea sigue siendo Int
+
+  if (isNaN(taskId)) {
+    console.error(`PUT /api/tasks/${params.id}: ID de tarea inválido: ${params.id}`);
+    return NextResponse.json({ message: 'ID de tarea inválido.' }, { status: 400 });
+  }
+
+  try {
+    const body = await request.json();
+    const { title, description, dueDate, priority, is_completed } = body;
+
+    const existingTask = await prisma.task.findUnique({
+      where: { id: taskId },
+    });
+
+    if (!existingTask) {
+      console.warn(`PUT /api/tasks/${params.id}: Tarea no encontrada.`);
+      return NextResponse.json({ message: 'Tarea no encontrada.' }, { status: 404 });
+    }
+
+    // Asegurarse de que el usuario solo pueda actualizar sus propias tareas
+    if (existingTask.userId !== userId) {
+      console.warn(`PUT /api/tasks/${params.id}: Acceso denegado. El usuario ${userId} intentó actualizar la tarea de otro usuario (${existingTask.userId}).`);
+      return NextResponse.json({ message: 'No autorizado para actualizar esta tarea.' }, { status: 403 });
+    }
+
+    const dataToUpdate: any = {
+      title: title?.trim(),
+      description: description ? description.trim() : null,
+      priority: priority,
+      is_completed: is_completed,
+    };
+
+    if (dueDate) {
+      dataToUpdate.due_date = new Date(dueDate);
+    } else if (dueDate === null) { // Permite establecer la fecha de vencimiento a null
+      dataToUpdate.due_date = null;
+    }
+
+    const updatedTask = await prisma.task.update({
+      where: { id: taskId },
+      data: dataToUpdate,
+    });
+
+    console.log(`PUT /api/tasks/${params.id}: Tarea actualizada con éxito:`, updatedTask.id);
+    return NextResponse.json({
+      message: 'Tarea actualizada con éxito',
+      task: updatedTask,
+    }, { status: 200 });
+
+  } catch (error) {
+    console.error(`PUT /api/tasks/${params.id}: Error al actualizar la tarea:`, error);
+    if (error instanceof Error) {
+      return NextResponse.json({ message: `Error interno del servidor: ${error.message}` }, { status: 500 });
+    }
+    return NextResponse.json({ message: 'Error interno del servidor' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  console.log(`API /api/tasks/${params.id} (DELETE) ha sido llamada.`);
+
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user || !session.user.id) {
+    console.warn(`DELETE /api/tasks/${params.id}: Intento no autorizado.`);
+    return NextResponse.json({ message: 'No autorizado' }, { status: 401 });
+  }
+
+  const userId = session.user.id; // userId es String
+  const taskId = parseInt(params.id, 10); // El ID de la tarea sigue siendo Int
+
+  if (isNaN(taskId)) {
+    console.error(`DELETE /api/tasks/${params.id}: ID de tarea inválido: ${params.id}`);
+    return NextResponse.json({ message: 'ID de tarea inválido.' }, { status: 400 });
+  }
+
+  try {
+    const existingTask = await prisma.task.findUnique({
+      where: { id: taskId },
+    });
+
+    if (!existingTask) {
+      console.warn(`DELETE /api/tasks/${params.id}: Tarea no encontrada.`);
+      return NextResponse.json({ message: 'Tarea no encontrada.' }, { status: 404 });
+    }
+
+    // Asegurarse de que el usuario solo pueda eliminar sus propias tareas
+    if (existingTask.userId !== userId) {
+      console.warn(`DELETE /api/tasks/${params.id}: Acceso denegado. El usuario ${userId} intentó eliminar la tarea de otro usuario (${existingTask.userId}).`);
+      return NextResponse.json({ message: 'No autorizado para eliminar esta tarea.' }, { status: 403 });
+    }
+
+    await prisma.task.delete({
+      where: { id: taskId },
+    });
+
+    console.log(`DELETE /api/tasks/${params.id}: Tarea eliminada con éxito:`, taskId);
+    return NextResponse.json({ message: 'Tarea eliminada con éxito.' }, { status: 200 });
+
+  } catch (error) {
+    console.error(`DELETE /api/tasks/${params.id}: Error al eliminar la tarea:`, error);
     if (error instanceof Error) {
       return NextResponse.json({ message: `Error interno del servidor: ${error.message}` }, { status: 500 });
     }

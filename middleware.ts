@@ -4,13 +4,13 @@ import { getToken } from 'next-auth/jwt'
 
 const publicRoutes = [  
   '/',
-  '/auth/login',
-  '/auth/register',
+  '/login',
+  '/register',
 ]
 
 const authRoutes = [
-  '/auth/login',
-  '/auth/register',
+  '/login',
+  '/register',
 ]
 
 const secret = process.env.NEXTAUTH_SECRET
@@ -31,7 +31,7 @@ export async function middleware(req: NextRequest) {
   }
 
   if (!isLoggedIn && !isPublicRoute) {
-    return NextResponse.redirect(new URL('/auth/login', nextUrl))
+    return NextResponse.redirect(new URL('/login', nextUrl))
   }
 
   return NextResponse.next()
