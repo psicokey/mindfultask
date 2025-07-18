@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import ThemeSwitcher from "app/components/ThemeSwitcher";
+import Link from "next/link";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,12 +29,16 @@ export default function AuthLayout({
   return (
     
     <main className={`min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-geist-sans ${geistSans.variable} ${geistMono.variable}`}>
-      <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex justify-end mb-4">
+      <header className="bg-white dark:bg-gray-800 shadow-md">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <Link href="/" className="text-2xl font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+            MindfulTask
+          </Link>
           <ThemeSwitcher />
+          
         </div>
-        {children}
-      </div>
+      </header>
+      {children}
     </main>
   );
 }

@@ -53,7 +53,7 @@ export default function Home() {
             {/* Asegúrate de que estas imágenes tengan un fondo transparente o sean SVG */}
             <img src="/nextjs-logo.svg" alt="Next.js" className="h-12 dark:invert" /> {/* dark:invert para logos oscuros */}
             <img src="/tailwindcss-logo.svg" alt="Tailwind CSS" className="h-8" />
-            <img src="/react-logo.svg" alt="React" className="h-12 dark:invert" />
+            <img src="/react-logo.svg" alt="React" className="h-12" />
             <img src="/typescript-logo.svg" alt="TypeScript" className="h-10" />
             <img src="/mariadb-logo.svg" alt="MariaDB" className="h-10" />
           </div>
@@ -239,7 +239,7 @@ export default function Home() {
             <div>
               <h4 className="font-bold mb-4">Conectar</h4>
               <div className="flex space-x-4">
-                <Link href="https://github.com/tu-usuario/mindfultask" className="text-gray-400 hover:text-white transition-colors">
+                <Link href="https://github.com/psicokey" className="text-gray-400 hover:text-white transition-colors">
                   <FaGithub className="text-2xl" />
                 </Link>
                 <Link href="#" className="text-gray-400 hover:text-white transition-colors">
