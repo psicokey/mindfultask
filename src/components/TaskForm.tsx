@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { Task } from '@prisma/client';
+import { addGuestTask, updateGuestTask } from 'app/lib/guest-storage';
 
 interface TaskFormProps {
   onTaskCreated?: () => void;
@@ -23,8 +24,8 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const { data: session } = useSession();
-  const userId = session?.user?.id; // userId es String
+  const { data: session, status } = useSession();
+  const userId = session?.user?.id;
 
   useEffect(() => {
     setTitle(initialTask?.title || '');
@@ -36,13 +37,14 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
     setSuccess(null);
   }, [initialTask]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => { 
     e.preventDefault();
     setError(null);
     setSuccess(null);
 
-    if (!userId) {
-      setError('Debes iniciar sesión para crear/editar una tarea.');
+    // No hacer nada si la sesión aún está cargando
+    if (status === 'loading') {
+      setError('Esperando autenticación...');
       return;
     }
 
@@ -53,18 +55,69 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
 
     setIsLoading(true);
 
-    const taskData = {
-      title: title.trim(),
-      description: description ? description.trim() : null,
-      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
-      priority,
-      is_completed: isCompleted,
-      userId: userId, // userId es String
-    };
+    // --- Lógica para el modo invitado ---
+    if (status === 'unauthenticated' || session?.user?.id?.startsWith('guest-')) {
+      try {
+        if (initialTask) {
+          // Editando una tarea de invitado
+          const updatedTaskData: Task = {
+            ...initialTask,
+            title: title.trim(),
+            description: description ? description.trim() : null,
+            due_date: dueDate ? new Date(dueDate) : null,
+            priority: priority as 'low' | 'medium' | 'high',
+            is_completed: isCompleted,
+            updatedAt: new Date(),
+          };
+          updateGuestTask(updatedTaskData);
+          setSuccess('Tarea actualizada con éxito en modo invitado.');
+          if (onTaskUpdated) onTaskUpdated();
+        } else {
+          // Creando una nueva tarea de invitado
+          const taskData = {
+            title: title.trim(),
+            description: description ? description.trim() : null,
+            due_date: dueDate ? new Date(dueDate) : null,
+            priority: priority as 'low' | 'medium' | 'high',
+            is_completed: isCompleted,
+          };
+          addGuestTask(taskData);
+          setSuccess('Tarea creada con éxito en modo invitado.');
+          // Limpiar el formulario para una nueva tarea
+          setTitle('');
+          setDescription('');
+          setDueDate('');
+          setPriority('medium');
+          setIsCompleted(false);
+          if (onTaskCreated) onTaskCreated();
+        }
+      } catch (err: any) {
+        setError(err.message || 'Ocurrió un error en modo invitado.');
+      } finally {
+        setIsLoading(false);
+      }
+      return; // Detener la ejecución para el modo invitado
+    }
+
+    // --- Lógica para el usuario autenticado ---
+    if (!userId) {
+      setError('Debes iniciar sesión para crear/editar una tarea.');
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const method = initialTask ? 'PUT' : 'POST';
       const url = initialTask ? `/api/tasks/${initialTask.id}` : '/api/tasks';
+
+      const taskData = {
+        title: title.trim(),
+        description: description ? description.trim() : null,
+        dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+        priority,
+        is_completed: isCompleted,
+        userId: userId,
+      };
 
       const response = await fetch(url, {
         method,

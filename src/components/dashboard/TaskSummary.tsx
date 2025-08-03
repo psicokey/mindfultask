@@ -15,6 +15,7 @@ import {
 } from 'chart.js';
 import { motion } from 'framer-motion';
 import { useDashboardContext } from 'app/components/dashboard/DashboardContext';
+import { getGuestTasks } from 'app/lib/guest-storage'; // Importar la función para invitados
 
 ChartJS.register(
   ArcElement,
@@ -55,7 +56,17 @@ const TaskSummary: React.FC<TaskSummaryProps> = () => {
       setIsLoading(true);
       return;
     }
-    if (!userId) {
+
+    // Modo Invitado
+    if (status === 'unauthenticated' || session?.user?.id?.startsWith('guest-')) {
+      console.log('TaskSummary (Guest): fetching tasks from localStorage');
+      const guestTasks = getGuestTasks();
+      setTasks(guestTasks);
+      setIsLoading(false);
+      return;
+    }
+
+    if (!userId) { // Usuario autenticado pero sin ID (caso anómalo)
       setError('No se pudieron cargar las tareas: Usuario no autenticado.');
       setIsLoading(false);
       setTasks([]);
@@ -65,7 +76,7 @@ const TaskSummary: React.FC<TaskSummaryProps> = () => {
     setIsLoading(true);
     setError(null);
 
-    try {
+    try { // Modo Autenticado
       const response = await fetch(`/api/tasks?userId=${userId}`, {
         method: 'GET',
         headers: {
@@ -104,7 +115,7 @@ const TaskSummary: React.FC<TaskSummaryProps> = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [userId, status]);
+  }, [userId, status, session]);
 
   useEffect(() => {
     fetchTasksData();

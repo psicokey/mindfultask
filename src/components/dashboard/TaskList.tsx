@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { Task } from '@prisma/client';
+import { getGuestTasks, saveGuestTasks } from 'app/lib/guest-storage';
 import { useRouter } from 'next/navigation';
 
 interface TaskListProps {
@@ -11,7 +12,7 @@ interface TaskListProps {
   onEditTask?: (task: Task) => void;
 }
 
-export default function TaskList({ refresh, refreshTrigger, onEditTask = () => {} }: TaskListProps) {
+export default function TaskList({ refreshTrigger, onEditTask = () => {} }: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +58,16 @@ export default function TaskList({ refresh, refreshTrigger, onEditTask = () => {
     }
 
     // Si la sesión ya cargó y no hay userId (usuario no autenticado), redirigir
-    if (!userId) {
+    if (status === 'unauthenticated' || session?.user?.id?.startsWith('guest-')) {
+      // Modo Invitado: Cargar tareas desde localStorage
+      console.log('Guest mode: fetching tasks from localStorage');
+      const guestTasks = getGuestTasks();
+      setTasks(guestTasks);
+      setTotalTasks(guestTasks.length);
+      setIsLoading(false);
+      // No redirigimos, permitimos que el invitado use la app
+      return;
+    } else if (!userId) {
       setError('No se pudo cargar las tareas: Usuario no autenticado. Redirigiendo a login...');
       setIsLoading(false);
       setTasks([]);
@@ -133,6 +143,14 @@ export default function TaskList({ refresh, refreshTrigger, onEditTask = () => {
     if (!confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
       return;
     }
+
+    // Modo Invitado
+    if (status === 'unauthenticated' || session?.user?.id?.startsWith('guest-')) {
+      const currentTasks = getGuestTasks();
+      const updatedTasks = currentTasks.filter(t => t.id !== taskId);
+      saveGuestTasks(updatedTasks);
+      return fetchTasks(); // Refresca la lista desde localStorage
+    }
     try {
       const response = await fetch(`/api/tasks/${taskId}`, {
         method: 'DELETE',
@@ -151,6 +169,19 @@ export default function TaskList({ refresh, refreshTrigger, onEditTask = () => {
   };
 
   const handleToggleComplete = async (task: Task) => {
+    // Modo Invitado
+    if (status === 'unauthenticated' || session?.user?.id?.startsWith('guest-')) {
+      const currentTasks = getGuestTasks();
+      const updatedTasks = currentTasks.map(t =>
+        t.id === task.id
+          ? { ...t, is_completed: !t.is_completed, updatedAt: new Date() }
+          : t
+      );
+      saveGuestTasks(updatedTasks);
+      return fetchTasks(); // Refresca la lista desde localStorage
+    }
+
+    // Modo Autenticado 
     try {
       const payload = {
         ...task,
@@ -177,7 +208,7 @@ export default function TaskList({ refresh, refreshTrigger, onEditTask = () => {
       setError(err.message || 'Ocurrió un error al actualizar la tarea.');
     }
   };
-
+  
   // --- Manejadores de Paginación ---
   const totalPages = Math.ceil(totalTasks / itemsPerPage);
 
