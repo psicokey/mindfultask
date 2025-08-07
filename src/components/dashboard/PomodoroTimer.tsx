@@ -57,7 +57,7 @@ export default function PomodoroTimer() {
   // Función para reproducir un sonido
   const playSound = () => {
     try {
-      const audio = new Audio('sounds/mixkit-alert-quick-chime-766.mp3'); // Asegúrate de tener este archivo en /public/sounds/
+      const audio = new Audio('/sounds/mixkit-alert-quick-chime-766.mp3'); // Ruta absoluta desde /public
       audio.play().catch(e => console.error("Error al reproducir sonido:", e));
     } catch (e) {
       console.error("No se pudo crear el objeto Audio:", e);

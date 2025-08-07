@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { FaCheckCircle, FaBrain, FaClock, FaChartLine, FaGithub } from 'react-icons/fa';
 import { FiExternalLink } from 'react-icons/fi';
-import ThemeSwitcher from 'app/components/ThemeSwitcher'; // Importa el nuevo componente
+import ThemeSwitcher from '../components/ThemeSwitcher'; // Ruta relativa estándar
 
 export default function Home() {
   return (
