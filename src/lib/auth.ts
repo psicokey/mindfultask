@@ -1,8 +1,7 @@
-import bcrypt from 'bcryptjs';
-import prisma from 'app/lib/prisma';
-import NextAuth, { AuthOptions, User } from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import { PrismaClient } from '@prisma/client'; // Importa la instancia singleton de PrismaClient
+import bcrypt from "bcryptjs";
+import { prisma } from "./prisma";
+import NextAuth, { AuthOptions, type User } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
 
 // Asegúrate de que tu modelo User en prisma/schema.prisma tenga un campo 'name'
 // y que 'user_id' sea el ID principal (normalmente Int o BigInt).
@@ -14,12 +13,11 @@ export const hashPassword = async (password: string) => {
 
 export const authOptions: AuthOptions = {
   providers: [
-
     CredentialsProvider({
-      name: 'Credentials',
+      name: "Credentials",
       credentials: {
-        email: { label: 'Email', type: 'text' },
-        password: { label: 'Password', type: 'password' }
+        email: { label: "Email", type: "text" },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials): Promise<User | null> {
         if (!credentials?.email || !credentials.password) {
@@ -29,12 +27,12 @@ export const authOptions: AuthOptions = {
 
         // Busca el usuario en la base de datos usando Prisma
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string }
+          where: { email: credentials.email as string },
         });
 
         // Si el usuario no existe o no tiene una contraseña (ej. si usas otros proveedores)
         if (!user || !user.password) {
-          throw new Error('Credenciales inválidas.'); // Mensaje genérico por seguridad
+          throw new Error("Credenciales inválidas."); // Mensaje genérico por seguridad
         }
 
         // Compara la contraseña proporcionada con la contraseña hasheada en la BD
@@ -44,7 +42,7 @@ export const authOptions: AuthOptions = {
         );
 
         if (!isPasswordValid) {
-          throw new Error('Credenciales inválidas.'); // Mensaje genérico por seguridad
+          throw new Error("Credenciales inválidas."); // Mensaje genérico por seguridad
         }
 
         // Si la autenticación es exitosa, devuelve un objeto User.
@@ -52,13 +50,13 @@ export const authOptions: AuthOptions = {
         return {
           id: user.id.toString(), // Asegúrate de que el ID sea un string
           name: user.name, // Asume que tu tabla 'User' tiene un campo 'name'
-          email: user.email
+          email: user.email,
         } as User;
-      }
-    })
+      },
+    }),
   ],
   session: {
-    strategy: 'jwt',
+    strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 días
   },
   callbacks: {
@@ -85,17 +83,17 @@ export const authOptions: AuthOptions = {
       return session;
     },
     // El callback 'signIn' se ejecuta al intentar iniciar sesión
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       // Solo permite el inicio de sesión si el proveedor es 'credentials'
       // y el usuario fue encontrado y validado.
-      if (user && account?.provider === 'credentials') {
+      if (user && account?.provider === "credentials") {
         return true;
       }
       return false;
-    }
+    },
   },
   pages: {
-    signIn: '/login' // Ruta personalizada para la página de inicio de sesión
+    signIn: "/login", // Ruta personalizada para la página de inicio de sesión
   },
   // La clave secreta principal para firmar tokens y cifrar datos.
   // Es crucial que sea una cadena larga y aleatoria.

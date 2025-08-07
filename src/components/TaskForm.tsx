@@ -92,7 +92,7 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
           if (onTaskCreated) onTaskCreated();
         }
       } catch (err: any) {
-        setError(err.message || 'Ocurrió un error en modo invitado.');
+        setError((err as Error).message || 'Ocurrió un error en modo invitado.');
       } finally {
         setIsLoading(false);
       }
@@ -151,7 +151,7 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
       }
       console.log(`Tarea ${initialTask ? 'actualizada' : 'creada'}:`, result.task);
     } catch (err: any) {
-      console.error(`Error al ${initialTask ? 'actualizar' : 'crear'} tarea:`, err);
+      console.error(`Error al ${initialTask ? 'actualizar' : 'crear'} tarea:`, err as Error);
       setError(err.message || 'Ocurrió un error inesperado.');
     } finally {
       setIsLoading(false);

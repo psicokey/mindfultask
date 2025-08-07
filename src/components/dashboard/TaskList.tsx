@@ -25,7 +25,7 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
   const [filterIsCompleted, setFilterIsCompleted] = useState(''); // Nuevo estado: '', 'true', 'false'
 
   // Estados para la ordenación
-  const [sortField, setSortField] = useState('createdAt'); // Campo por defecto, alineado con Prisma
+  const [sortField, setSortField] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc'); // Orden por defecto
 
   // Estados para la paginación
@@ -162,7 +162,7 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
       }
 
       fetchTasks();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al eliminar tarea:', err);
       setError(err.message || 'Ocurrió un error al eliminar la tarea.');
     }
@@ -203,7 +203,7 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
       }
 
       fetchTasks();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al actualizar tarea:', err);
       setError(err.message || 'Ocurrió un error al actualizar la tarea.');
     }
@@ -226,7 +226,7 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
 
   const getPaginationButtons = () => {
     const buttons = [];
-    const maxButtons = 5;
+    const maxButtons = 5; // Puedes ajustar este número
     let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
     let endPage = Math.min(totalPages, startPage + maxButtons - 1);
 
