@@ -1,5 +1,6 @@
 // src/app/page.tsx
 import Link from 'next/link';
+import Image from 'next/image';
 import { FaCheckCircle, FaBrain, FaClock, FaChartLine, FaGithub } from 'react-icons/fa';
 import { FiExternalLink } from 'react-icons/fi';
 import ThemeSwitcher from '../components/ThemeSwitcher'; // Ruta relativa estándar
@@ -50,12 +51,11 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4">
           <p className="text-center text-gray-500 dark:text-gray-400 mb-8">Tecnologías utilizadas:</p>
           <div className="flex flex-wrap justify-center gap-12 items-center">
-            {/* Asegúrate de que estas imágenes tengan un fondo transparente o sean SVG */}
-            <img src="/nextjs-logo.svg" alt="Next.js" className="h-12 dark:invert" /> {/* dark:invert para logos oscuros */}
-            <img src="/tailwindcss-logo.svg" alt="Tailwind CSS" className="h-8" />
-            <img src="/react-logo.svg" alt="React" className="h-12" />
-            <img src="/typescript-logo.svg" alt="TypeScript" className="h-10" />
-            <img src="/postgresql-logo.svg" alt="PostgreSQL" className="h-10" />
+            <Image src="/nextjs-logo.svg" alt="Next.js" width={48} height={48} className="h-12 w-auto dark:invert" />
+            <Image src="/tailwindcss-logo.svg" alt="Tailwind CSS" width={100} height={32} className="h-8 w-auto" />
+            <Image src="/react-logo.svg" alt="React" width={48} height={48} className="h-12 w-auto" />
+            <Image src="/typescript-logo.svg" alt="TypeScript" width={40} height={40} className="h-10 w-auto" />
+            <Image src="/postgresql-logo.svg" alt="PostgreSQL" width={40} height={40} className="h-10 w-auto" />
           </div>
         </div>
       </div>
@@ -160,8 +160,8 @@ export default function Home() {
                 </div>
               </div>
               <p className="text-gray-700 italic dark:text-gray-300">
-                "MindfulTask ha transformado cómo organizo mi día. Las pausas conscientes integradas 
-                han reducido mi estrés significativamente mientras mantengo mi productividad."
+                &quot;MindfulTask ha transformado cómo organizo mi día. Las pausas conscientes integradas 
+                han reducido mi estrés significativamente mientras mantengo mi productividad.&quot;
               </p>
             </div>
 
@@ -176,8 +176,8 @@ export default function Home() {
                 </div>
               </div>
               <p className="text-gray-700 italic dark:text-gray-300">
-                "Como desarrollador, paso horas frente a la computadora. MindfulTask me ayuda a 
-                mantener el enfoque sin descuidar mi bienestar mental. ¡La matriz de Eisenhower es un game-changer!"
+                &quot;Como desarrollador, paso horas frente a la computadora. MindfulTask me ayuda a 
+                mantener el enfoque sin descuidar mi bienestar mental. ¡La matriz de Eisenhower es un game-changer!&quot;
               </p>
             </div>
           </div>

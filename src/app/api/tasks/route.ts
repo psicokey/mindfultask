@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("POST /api/tasks: Error al crear la tarea:", error);
+    console.error("POST /api/tasks: Error al crear la tarea:", error as Error);
     if (error instanceof Error) {
       return NextResponse.json(
         { message: `Error interno del servidor: ${error.message}` },
@@ -207,7 +207,10 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("GET /api/tasks: Error al obtener las tareas:", error);
+    console.error(
+      "GET /api/tasks: Error al obtener las tareas:",
+      error as Error
+    );
     if (error instanceof Error) {
       return NextResponse.json(
         { message: `Error interno del servidor: ${error.message}` },
@@ -274,12 +277,19 @@ export async function PUT(
       );
     }
 
-    const dataToUpdate: any = {
-      title: title?.trim(),
-      description: description ? description.trim() : null,
-      priority: priority,
-      is_completed: is_completed,
-    };
+    const dataToUpdate: Prisma.TaskUpdateInput = {};
+    if (title !== undefined) {
+      dataToUpdate.title = title.trim();
+    }
+    if (description !== undefined) {
+      dataToUpdate.description = description ? description.trim() : null;
+    }
+    if (priority !== undefined) {
+      dataToUpdate.priority = priority;
+    }
+    if (is_completed !== undefined) {
+      dataToUpdate.is_completed = is_completed;
+    }
 
     if (dueDate) {
       dataToUpdate.due_date = new Date(dueDate);
@@ -307,7 +317,7 @@ export async function PUT(
   } catch (error) {
     console.error(
       `PUT /api/tasks/${params.id}: Error al actualizar la tarea:`,
-      error
+      error as Error
     );
     if (error instanceof Error) {
       return NextResponse.json(
@@ -387,7 +397,7 @@ export async function DELETE(
   } catch (error) {
     console.error(
       `DELETE /api/tasks/${params.id}: Error al eliminar la tarea:`,
-      error
+      error as Error
     );
     if (error instanceof Error) {
       return NextResponse.json(
