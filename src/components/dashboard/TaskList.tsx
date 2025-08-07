@@ -3,7 +3,17 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { Task } from '@prisma/client';
+// Define Task interface locally to match your expected structure
+export interface Task {
+  id: number;
+  title: string;
+  description?: string;
+  priority: 'low' | 'medium' | 'high';
+  due_date?: string | null;
+  is_completed: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
 import { getGuestTasks, saveGuestTasks } from 'app/lib/guest-storage';
 import { useRouter } from 'next/navigation';
 
@@ -164,7 +174,11 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
       fetchTasks();
     } catch (err) {
       console.error('Error al eliminar tarea:', err);
-      setError(err.message || 'Ocurrió un error al eliminar la tarea.');
+      if (err instanceof Error) {
+        setError(err.message || 'Ocurrió un error al eliminar la tarea.');
+      } else {
+        setError('Ocurrió un error al eliminar la tarea.');
+      }
     }
   };
 
@@ -205,7 +219,11 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
       fetchTasks();
     } catch (err) {
       console.error('Error al actualizar tarea:', err);
-      setError(err.message || 'Ocurrió un error al actualizar la tarea.');
+      if (err instanceof Error) {
+        setError(err.message || 'Ocurrió un error al actualizar la tarea.');
+      } else {
+        setError('Ocurrió un error al actualizar la tarea.');
+      }
     }
   };
   

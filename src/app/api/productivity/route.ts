@@ -40,10 +40,12 @@ export async function GET() {
     let totalPomodoroDurationSeconds = 0;
     let totalPomodoroCycles = 0;
 
-    pomodoroSessions.forEach((session) => {
-      totalPomodoroDurationSeconds += session.duration;
-      totalPomodoroCycles += session.cycles_completed;
-    });
+    pomodoroSessions.forEach(
+      (session: { duration: number; cycles_completed: number }) => {
+        totalPomodoroDurationSeconds += session.duration;
+        totalPomodoroCycles += session.cycles_completed;
+      }
+    );
 
     const totalPomodoroDurationMinutes = Math.floor(
       totalPomodoroDurationSeconds / 60
@@ -67,7 +69,7 @@ export async function GET() {
       },
     });
 
-    tasksLast7Days.forEach((task) => {
+    tasksLast7Days.forEach((task: { updatedAt: Date }) => {
       const taskDate = new Date(task.updatedAt);
       taskDate.setHours(0, 0, 0, 0);
 

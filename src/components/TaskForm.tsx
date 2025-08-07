@@ -3,7 +3,18 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { Task } from '@prisma/client';
+// Define Task type locally to match your task structure
+interface Task {
+  id: string;
+  title: string;
+  description?: string | null;
+  due_date?: Date | string | null;
+  priority: 'low' | 'medium' | 'high';
+  is_completed: boolean;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+  userId?: string;
+}
 import { addGuestTask, updateGuestTask } from 'app/lib/guest-storage';
 
 interface TaskFormProps {
@@ -214,7 +225,7 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
           <select
             id="priority"
             value={priority}
-            onChange={(e) => setPriority(e.target.value)}
+            onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high')}
             className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
           >
             <option value="low">Baja</option>

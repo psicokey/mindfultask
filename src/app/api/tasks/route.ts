@@ -5,6 +5,11 @@ import { authOptions } from "../auth/[...nextauth]/route"; // Asegúrate de que 
 import { prisma } from "../../../lib/prisma";
 import { Prisma } from "@prisma/client";
 
+// Para los tipos:
+type TaskCreateInput = Prisma.TaskCreateInput;
+type TaskWhereInput = Prisma.TaskWhereInput;
+type TaskOrderByWithRelationInput = Prisma.TaskOrderByWithRelationInput;
+
 export async function POST(request: NextRequest) {
   console.log("API /api/tasks (POST) ha sido llamada.");
 
@@ -56,7 +61,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const dataToCreate: Prisma.TaskCreateInput = {
+    const dataToCreate: TaskCreateInput = {
       title: title.trim(),
       description: description ? description.trim() : null,
       priority: priority || "medium",
@@ -121,7 +126,7 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit;
 
-    const whereClause: Prisma.TaskWhereInput = {
+    const whereClause: TaskWhereInput = {
       userId: userId, // userId es String
     };
 
@@ -167,7 +172,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const orderByClause: Prisma.TaskOrderByWithRelationInput = {};
+    const orderByClause: TaskOrderByWithRelationInput = {};
     const validSortFields = [
       "createdAt",
       "due_date",
@@ -176,7 +181,7 @@ export async function GET(request: NextRequest) {
       "is_completed",
     ];
     if (validSortFields.includes(sortField)) {
-      orderByClause[sortField as keyof Prisma.TaskOrderByWithRelationInput] =
+      orderByClause[sortField as keyof TaskOrderByWithRelationInput] =
         sortOrder as "asc" | "desc";
     } else {
       orderByClause.createdAt = "desc";
