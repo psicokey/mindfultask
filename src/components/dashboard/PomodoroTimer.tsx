@@ -188,12 +188,14 @@ export default function PomodoroTimer() {
             setMinutes(longBreakTime);
             showCustomAlert('¡Tiempo de Descanso Largo!', 'info');
           } else {
+            // Calcula los valores finales en el momento, no dependas del estado que se acaba de actualizar.
+            const finalWorkTime = totalWorkTimeAccumulated + completedTimeForCurrentMode;
             setIsActive(false);
             savePomodoroSession({
               duration: sessionDuration + completedTimeForCurrentMode,
               cycles_completed: newCurrentCycle,
               userId: userId || 'unknown',
-              work_duration_seconds: totalWorkTimeAccumulated + completedTimeForCurrentMode,
+              work_duration_seconds: finalWorkTime,
               break_duration_seconds: totalBreakTimeAccumulated,
             });
             setCurrentCycle(0);
@@ -217,13 +219,15 @@ export default function PomodoroTimer() {
         setSeconds(0);
         showCustomAlert('¡Tiempo de Trabajo!', 'info');
       } else if (mode === 'long-break') {
+        // Calcula los valores finales aquí también.
+        const finalBreakTime = totalBreakTimeAccumulated + completedTimeForCurrentMode;
         setIsActive(false);
         savePomodoroSession({
           duration: sessionDuration + completedTimeForCurrentMode,
           cycles_completed: currentCycle,
           userId: userId || 'unknown',
           work_duration_seconds: totalWorkTimeAccumulated,
-          break_duration_seconds: totalBreakTimeAccumulated + completedTimeForCurrentMode,
+          break_duration_seconds: finalBreakTime,
         });
         setCurrentCycle(0);
         setSessionDuration(0);

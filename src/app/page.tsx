@@ -30,7 +30,7 @@ export default function Home() {
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link 
-              href="/register" 
+              href="/login" 
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors shadow-lg dark:bg-blue-700 dark:hover:bg-blue-800"
             >
               Comenzar Gratis
@@ -55,7 +55,7 @@ export default function Home() {
             <img src="/tailwindcss-logo.svg" alt="Tailwind CSS" className="h-8" />
             <img src="/react-logo.svg" alt="React" className="h-12" />
             <img src="/typescript-logo.svg" alt="TypeScript" className="h-10" />
-            <img src="/mariadb-logo.svg" alt="MariaDB" className="h-10" />
+            <img src="/postgresql-logo.svg" alt="PostgreSQL" className="h-10" />
           </div>
         </div>
       </div>
@@ -195,7 +195,7 @@ export default function Home() {
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link 
-              href="/register" 
+              href="/login" 
               className="bg-white hover:bg-gray-100 text-blue-600 font-bold py-3 px-8 rounded-lg text-lg transition-colors shadow-lg dark:bg-gray-200 dark:hover:bg-gray-300 dark:text-blue-800"
             >
               Comenzar Gratis
@@ -240,10 +240,10 @@ export default function Home() {
               <h4 className="font-bold mb-4">Conectar</h4>
               <div className="flex space-x-4">
                 <Link href="https://github.com/psicokey" className="text-gray-400 hover:text-white transition-colors">
-                  <FaGithub className="text-2xl" />
+                <FaGithub className="text-2xl" />
                 </Link>
-                <Link href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <FiExternalLink className="text-2xl" />
+                <Link href="https://portfolio-omega-rose-47.vercel.app/" className="text-gray-400 hover:text-white transition-colors">
+               <FiExternalLink className="text-2xl" />
                 </Link>
               </div>
             </div>
