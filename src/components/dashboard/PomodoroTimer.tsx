@@ -114,7 +114,7 @@ export default function PomodoroTimer() {
         throw new Error(errorData.message || 'Error del servidor');
       }
 
-      const result = await response.json();
+      await response.json();
       // console.log("Sesión guardada con éxito:", result); // Log para depuración
       showCustomAlert(`¡Sesión completada y guardada!\nCiclos: ${data.cycles_completed}\nTrabajo: ${Math.floor(data.work_duration_seconds / 60)} min\nDescanso: ${Math.floor(data.break_duration_seconds / 60)} min.`, 'success');
 

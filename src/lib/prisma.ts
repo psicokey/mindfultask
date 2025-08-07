@@ -1,18 +1,22 @@
-// lib/prisma.ts
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
-// declare global {
-//   var prisma: PrismaClient | undefined;
-// }
+// This is a best practice for using Prisma with Next.js.
+// It prevents creating too many instances of PrismaClient in development
+// due to Next.js's hot-reloading feature, which can exhaust database connections.
+//
+// Learn more: https://pris.ly/d/help/next-js-best-practices
 
-// Esto asegura que solo haya una instancia de PrismaClient en desarrollo
-// para evitar múltiples conexiones a la base de datos debido al hot-reloading de Next.js.
-const prisma = global.prisma || new PrismaClient({
-  log: ['query'], // Opcional: para ver las consultas SQL en la consola
-});
+const globalForPrisma = global as unknown as {
+  prisma: PrismaClient | undefined;
+};
 
-if (process.env.NODE_ENV === 'development') {
-  global.prisma = prisma;
-}
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log:
+      process.env.NODE_ENV === "development"
+        ? ["query", "error", "warn"]
+        : ["error"],
+  });
 
-export default prisma;
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

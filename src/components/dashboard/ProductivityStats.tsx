@@ -77,9 +77,13 @@ export default function ProductivityStats() {
 
       const result: ProductivityStatsData = await response.json();
       setStats(result);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al obtener estadísticas de productividad:', err);
-      setError(err.message || 'Ocurrió un error inesperado al cargar las estadísticas.');
+      setError(
+        typeof err === 'object' && err !== null && 'message' in err
+          ? String((err as { message?: unknown }).message)
+          : 'Ocurrió un error inesperado al cargar las estadísticas.'
+      );
       setStats(null);
     } finally {
       setIsLoading(false);
