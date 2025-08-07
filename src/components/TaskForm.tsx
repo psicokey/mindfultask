@@ -71,14 +71,17 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
       try {
         if (initialTask) {
           // Editando una tarea de invitado
-          const updatedTaskData: Task = {
+          const updatedTaskData = {
             ...initialTask,
+            id: typeof initialTask.id === 'string' ? parseInt(initialTask.id, 10) : initialTask.id,
             title: title.trim(),
             description: description ? description.trim() : null,
             due_date: dueDate ? new Date(dueDate) : null,
-            priority: priority as 'low' | 'medium' | 'high',
+            priority: priority,
             is_completed: isCompleted,
             updatedAt: new Date(),
+            userId: initialTask.userId ?? '', // Ensure userId is always a string
+            createdAt: initialTask.createdAt ? new Date(initialTask.createdAt) : new Date(), // Ensure createdAt exists
           };
           updateGuestTask(updatedTaskData);
           setSuccess('Tarea actualizada con éxito en modo invitado.');

@@ -98,8 +98,21 @@ function DashboardLayoutContent({ user, children }: DashboardLayoutClientProps) 
         onClose={handleCloseFormModal}
         title={selectedTask ? 'Editar Tarea' : 'Crear Nueva Tarea'}
       >
-        <TaskForm
-          initialTask={selectedTask}
+          <TaskForm
+          initialTask={
+            selectedTask
+              ? {
+                  ...selectedTask,
+                  id: String(selectedTask.id),
+                  priority:
+                    selectedTask.priority === 'low' ||
+                    selectedTask.priority === 'medium' ||
+                    selectedTask.priority === 'high'
+                      ? selectedTask.priority
+                      : 'low', // fallback to 'low' if not valid
+                }
+              : null
+          }
           onTaskCreated={handleTaskFormSuccess}
           onTaskUpdated={handleTaskFormSuccess}
         />

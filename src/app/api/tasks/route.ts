@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       title: title.trim(),
       description: description ? description.trim() : null,
       priority: priority || "medium",
-      userId: userId, // userId es String
+      user: { connect: { id: userId } }, // Relación correcta con el usuario
     };
 
     if (dueDate) {

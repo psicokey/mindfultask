@@ -72,8 +72,18 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
       // Modo Invitado: Cargar tareas desde localStorage
       console.log('Guest mode: fetching tasks from localStorage');
       const guestTasks = getGuestTasks();
-      setTasks(guestTasks);
-      setTotalTasks(guestTasks.length);
+      const mappedTasks: Task[] = guestTasks.map(t => ({
+        id: t.id,
+        title: t.title,
+        description: t.description === null ? undefined : t.description,
+        priority: t.priority as 'low' | 'medium' | 'high',
+        due_date: t.due_date ? t.due_date.toString() : null,
+        is_completed: t.is_completed,
+        createdAt: t.createdAt ? t.createdAt.toString() : undefined,
+        updatedAt: t.updatedAt ? t.updatedAt.toString() : undefined,
+      }));
+      setTasks(mappedTasks);
+      setTotalTasks(mappedTasks.length);
       setIsLoading(false);
       // No redirigimos, permitimos que el invitado use la app
       return;
