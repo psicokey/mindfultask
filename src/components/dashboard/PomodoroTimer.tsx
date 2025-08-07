@@ -94,8 +94,9 @@ export default function PomodoroTimer() {
       return;
     }
 
-    if (!userId) {
-      showCustomAlert('No se pudo guardar la sesión: Usuario no autenticado.', 'error');
+    // No guardar la sesión para invitados o si no hay ID de usuario.
+    if (!userId || userId.startsWith('guest-')) {
+      // Opcional: podrías mostrar un mensaje informando que las sesiones de invitado no se guardan.
       console.error("No se pudo guardar la sesión: userId no disponible.");
       return;
     }

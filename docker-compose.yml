@@ -1,11 +1,26 @@
 services:
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    container_name: mindfultask_phpmyadmin
+  postgres:
+    image: postgres:latest
     environment:
-      # 'host.docker.internal' es un DNS especial que apunta a tu máquina host desde el contenedor
-      PMA_HOST: host.docker.internal
-      PMA_PORT: 3306 # El puerto donde corre tu MariaDB local
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: mindfultask_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@mail.com # Cambia esto por tu email
+      PGADMIN_DEFAULT_PASSWORD: admin # Cambia esto por una contraseña segura
     ports:
       - "8080:80"
-    restart: always
+    depends_on:
+      - postgres
+    
+
+volumes:
+  postgres_data:
