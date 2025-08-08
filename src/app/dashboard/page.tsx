@@ -3,7 +3,8 @@
 
 import TaskSummary from 'app/components/dashboard/TaskSummary';
 import TaskList from 'app/components/dashboard/TaskList';
-import { useDashboardContext } from 'app/components/dashboard/DashboardContext'; // Importa el hook de contexto
+import { useDashboardContext } from 'app/components/dashboard/DashboardContext';
+
 
 export default function DashboardPage() {
   const { handleOpenNewTaskModal, handleOpenEditTaskModal, taskRefreshTrigger } = useDashboardContext();
@@ -26,7 +27,7 @@ export default function DashboardPage() {
       {/* Componente TaskList */}
       <TaskList
         refreshTrigger={taskRefreshTrigger}
-        onEditTask={handleOpenEditTaskModal}
+        onEditTask={handleOpenEditTaskModal} // Pasa la función para editar tareas
       />
     </>
   );
