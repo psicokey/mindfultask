@@ -13,7 +13,7 @@ import {
   Legend,
 } from 'chart.js';
 import { motion } from 'framer-motion';
-import { getGuestTasks } from 'app/lib/guest-storage'; // Importar la función para invitados
+import { getGuestTasks } from 'app/lib/guest-storage';
 
 ChartJS.register(
   ArcElement,
@@ -29,35 +29,25 @@ interface Task {
   due_date: Date | null;
   priority: 'low' | 'medium' | 'high';
   is_completed: boolean;
-  userId: string; // userId es String
+  userId: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Tipo para tareas con fechas como strings (desde API o localStorage)
 type RawTask = Omit<Task, "due_date" | "createdAt" | "updatedAt"> & {
   due_date: string | null;
   createdAt: string;
   updatedAt: string;
 };
 
-
-interface TaskSummaryProps {
-  tasks: Task[];
-  isLoading: boolean;
-  error: string | null;
-  onEditTask: (task: Task) => void; // Callback para editar tarea
-}
-
-const TaskSummary: React.FC<TaskSummaryProps> = () => {
-  
+const TaskSummary: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'productivity' | 'wellbeing'>('productivity');
 
   const { data: session, status } = useSession();
-  const userId = session?.user?.id; // userId es String
+  const userId = session?.user?.id;
 
   const fetchTasksData = useCallback(async () => {
     if (status === 'loading') {
@@ -67,7 +57,6 @@ const TaskSummary: React.FC<TaskSummaryProps> = () => {
 
     // Modo Invitado
     if (status === 'unauthenticated' || session?.user?.id?.startsWith('guest-')) {
-      console.log('TaskSummary (Guest): fetching tasks from localStorage');
       const guestTasks = getGuestTasks();
       if (guestTasks) {
         const fetchedTasks: Task[] = guestTasks.map((task) => ({
@@ -85,7 +74,7 @@ const TaskSummary: React.FC<TaskSummaryProps> = () => {
       return;
     }
 
-    if (!userId) { // Usuario autenticado pero sin ID (caso anómalo)
+    if (!userId) {
       setError('No se pudieron cargar las tareas: Usuario no autenticado.');
       setIsLoading(false);
       setTasks([]);
@@ -95,7 +84,7 @@ const TaskSummary: React.FC<TaskSummaryProps> = () => {
     setIsLoading(true);
     setError(null);
 
-    try { // Modo Autenticado
+    try {
       const response = await fetch(`/api/tasks?userId=${userId}`, {
         method: 'GET',
         headers: {
@@ -114,21 +103,20 @@ const TaskSummary: React.FC<TaskSummaryProps> = () => {
         try {
           errorData = await response.json();
         } catch (parseError) {
-          console.error("Error al parsear la respuesta de error JSON:", parseError);
+          // Puedes loguear el error si lo necesitas
         }
         throw new Error(errorData.message);
       }
 
       const result: { tasks: RawTask[] } = await response.json();
-      const fetchedTasks: Task[] = result.tasks.map((task: RawTask) => ({
+      const fetchedTasks: Task[] = result.tasks.map((task) => ({
         ...task,
         due_date: task.due_date ? new Date(task.due_date) : null,
         createdAt: new Date(task.createdAt),
         updatedAt: new Date(task.updatedAt),
       }));
       setTasks(fetchedTasks);
-    } catch (err: unknown) {
-      console.error('Error fetching tasks:', err);
+    } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
