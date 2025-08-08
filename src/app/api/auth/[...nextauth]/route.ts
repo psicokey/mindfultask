@@ -3,20 +3,16 @@
 
 import NextAuth, { AuthOptions, User } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import Google from "next-auth/providers/google"; // Importa el proveedor de Google
-import * as prisma from "app/lib/prisma"; // Asegúrate de que la ruta sea correcta, se cambió a @/lib/prisma
+import GoogleProvider from "next-auth/providers/google";
+import { prisma } from "app/lib/prisma";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
-import { User as PrismaUser } from "@prisma/client"; // Importa el tipo User de Prisma
 
 // La función authenticateUser ahora devuelve un tipo User de Prisma (o el que uses)
 // Asegúrate de que tu modelo 'user' en la base de datos incluya id, name, email, password y role.
-async function getUser(email: string): Promise<PrismaUser | null> {
+async function getUser(email: string) {
   try {
-    const user = await prisma.prisma.user.findUnique({
-      where: { email },
-    });
-    return user;
+    return await prisma.user.findUnique({ where: { email } });
   } catch (error) {
     console.error("Error al buscar el usuario:", error);
     return null;
@@ -76,7 +72,7 @@ export const authOptions: AuthOptions = {
       },
     }),
     // --- Implementación del Google Provider ---
-    Google({
+    GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
       // Opcional: Puedes configurar scopes adicionales si los necesitas
