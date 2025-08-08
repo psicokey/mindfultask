@@ -103,6 +103,7 @@ const TaskSummary: React.FC = () => {
         try {
           errorData = await response.json();
         } catch (parseError) {
+          console.error('Error al analizar la respuesta JSON:', parseError);
           // Puedes loguear el error si lo necesitas
         }
         throw new Error(errorData.message);
