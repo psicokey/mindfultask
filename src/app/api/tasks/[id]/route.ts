@@ -1,7 +1,7 @@
 // app/api/tasks/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "app/app/api/auth/[...nextauth]/route"; // Importa tus opciones de autenticación de NextAuth
+import { authOptions } from "app/lib/auth"; // Importa tus opciones de autenticación de NextAuth
 import * as prisma from "app/lib/prisma"; // Asegúrate de que la ruta sea correcta
 import { Prisma } from "@prisma/client"; // Importa Prisma para los tipos
 

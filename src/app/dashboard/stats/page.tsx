@@ -1,7 +1,7 @@
 // app/dashboard/stats/page.tsx
 import ProductivityStats from 'app/components/dashboard/ProductivityStats'; // Importa tu componente de estadísticas
 import { getServerSession } from 'next-auth';
-import { authOptions } from 'app/app/api/auth/[...nextauth]/route';
+import { authOptions } from 'app/lib/auth'; // Asegúrate de que la ruta sea correcta
 import { redirect } from 'next/navigation';
 
 export default async function DashboardStatsPage() {

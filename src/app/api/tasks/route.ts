@@ -1,7 +1,7 @@
 // app/api/tasks/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route"; // Asegúrate de que la ruta sea correcta
+import { authOptions } from "app/lib/auth"; // Asegúrate de que la ruta sea correcta
 import { Prisma } from "@prisma/client";
 import { prisma } from "app/lib/prisma";
 

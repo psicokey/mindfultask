@@ -1,7 +1,7 @@
 // app/api/productivity/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route"; // Asegúrate de que la ruta sea correcta
+import { authOptions } from "app/lib/auth"; // Asegúrate de que la ruta sea correcta
 import { prisma } from "../../../lib/prisma";
 
 export async function GET() {

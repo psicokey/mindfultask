@@ -1,4 +1,4 @@
-import { hashPassword } from "../../../../lib/auth";
+import { hashPassword } from "app/lib/auth"; // Asegúrate de que la ruta sea correcta
 import { prisma } from "../../../../lib/prisma";
 import { NextResponse } from "next/server";
 

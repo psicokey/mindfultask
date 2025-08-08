@@ -14,6 +14,15 @@ async function getUser(email: string) {
     return null;
   }
 }
+export async function hashPassword(password: string): Promise<string | null> {
+  try {
+    const hashedPassword = await bcrypt.hash(password, 12);
+    return hashedPassword;
+  } catch (error) {
+    console.error("Error al hashear la contraseña:", error);
+    return null;
+  }
+}
 
 export const authOptions: AuthOptions = {
   providers: [

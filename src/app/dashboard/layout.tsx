@@ -1,6 +1,6 @@
 // app/dashboard/layout.tsx
 import { getServerSession } from 'next-auth';
-import { authOptions } from 'app/app/api/auth/[...nextauth]/route'; // Ajusta la ruta de importación si es necesario
+import { authOptions } from 'app/lib/auth'; // Ajusta la ruta de importación si es necesario
 import { redirect } from 'next/navigation';
 import DashboardLayoutClient from 'app/components/dashboard/DashboardLayoutClient'; // Importa el layout de cliente
 
