@@ -4,8 +4,6 @@
 import TaskList from 'app/components/dashboard/TaskList';
 import { useDashboardContext } from 'app/components/dashboard/DashboardContext';
 import TaskSummary from 'app/components/dashboard/TaskSummary';
-import DashboardClient from './DashboardClient';
-
 
 export default function DashboardPage() {
   const { handleOpenNewTaskModal, handleOpenEditTaskModal, taskRefreshTrigger } = useDashboardContext();

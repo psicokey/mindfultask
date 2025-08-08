@@ -20,7 +20,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskRefreshTrigger, setTaskRefreshTrigger] = useState(0);
-  const { data: session, status } = useSession();
+  const { data: session} = useSession();
   const userId = user?.id || session?.user?.id;
   if (!userId) {
     return <p>Cargando usuario...</p>;
