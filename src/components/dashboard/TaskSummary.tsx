@@ -32,7 +32,7 @@ interface TaskSummaryProps {
 }
 
 // Ahora el componente acepta las props que le pasas desde DashboardClient
-const TaskSummary: React.FC<TaskSummaryProps> = ({ userId, refreshTrigger, onEditTask, onTaskForm }) => {
+const TaskSummary: React.FC<TaskSummaryProps> = ({ userId, refreshTrigger}) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +53,7 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ userId, refreshTrigger, onEdi
         const fetchedTasks: Task[] = guestTasks.map((task) => ({
           ...task,
           // Corregir el tipo de 'priority' si es necesario, asumiendo que ya fue corregido en TaskForm
-          priority: task.priority as any,
+          priority: task.priority || 'low',
           due_date: task.due_date ? new Date(task.due_date) : null,
           createdAt: new Date(task.createdAt),
           updatedAt: new Date(task.updatedAt),
@@ -101,7 +101,7 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ userId, refreshTrigger, onEdi
         throw new Error(errorData.message);
       }
 
-      const result: { tasks: any[] } = await response.json();
+      const result: { tasks: Task[] } = await response.json();
       const fetchedTasks: Task[] = result.tasks.map((task) => ({
         ...task,
         due_date: task.due_date ? new Date(task.due_date) : null,
