@@ -2,13 +2,13 @@
 'use client';
 
 import { useState } from 'react';
-import TaskSummary from 'app/components/dashboard/TaskSummary';
+import TaskSummary from 'app/components/dashboard/TaskSummary'; // Asegúrate de que las rutas son correctas
 import PomodoroTimer from 'app/components/dashboard/PomodoroTimer';
 import TaskForm from 'app/components/TaskForm';
 import Modal from 'app/components/Modal';
 import TaskList from 'app/components/dashboard/TaskList';
 import { Session } from 'next-auth';
-import { Task } from '@prisma/client'; // Asegúrate de que este es el único tipo 'Task' que usas
+import { Task } from '@prisma/client';
 
 interface DashboardClientProps {
   user: Session['user'];
@@ -66,12 +66,14 @@ export default function DashboardClient({ user }: DashboardClientProps) {
               + Nueva Tarea
             </button>
 
-            <TaskSummary />
+            {/* Asegúrate de que TaskSummary reciba las props necesarias */}
+            <TaskSummary userId={user.id}
+              refreshTrigger={taskRefreshTrigger}
+              onEditTask={handleOpenEditTaskModal}
+              onTaskForm />
 
             <TaskList
               refreshTrigger={taskRefreshTrigger}
-              // El tipo de 'handleOpenEditTaskModal' debe coincidir con el prop en TaskList.
-              // Asegúrate de que TaskList.tsx también importe { Task } de '@prisma/client'.
               onEditTask={handleOpenEditTaskModal}
             />
           </div>
@@ -83,7 +85,8 @@ export default function DashboardClient({ user }: DashboardClientProps) {
       </Modal>
 
       <Modal isOpen={isEditTaskModalOpen} onClose={handleCloseEditTaskModal} title="Editar Tarea">
-        <TaskForm onTaskUpdated={handleTaskFormSuccess} />
+        {/* Aquí pasamos la tarea seleccionada al TaskForm para que pueda editarla */}
+        <TaskForm initialTask={selectedTask} onTaskUpdated={handleTaskFormSuccess} />
       </Modal>
     </div>
   );

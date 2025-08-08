@@ -97,18 +97,14 @@ function DashboardLayoutContent({ user, children }: DashboardLayoutClientProps) 
       >
           <TaskForm
           initialTask={
-            selectedTask
-              ? {
-                  ...selectedTask,
-                  id: String(selectedTask.id),
-                  priority:
-                    selectedTask.priority === 'low' ||
-                    selectedTask.priority === 'medium' ||
-                    selectedTask.priority === 'high'
-                      ? selectedTask.priority
-                      : 'low', // fallback to 'low' if not valid
-                }
-              : null
+            selectedTask ? {
+              id: selectedTask.id,
+              title: selectedTask.title,
+              description: selectedTask.description || '',
+              due_date: selectedTask.due_date ? new Date(selectedTask.due_date) : null,
+              priority: selectedTask.priority,
+              is_completed: selectedTask.is_completed,
+            } : null
           }
           onTaskCreated={handleTaskFormSuccess}
           onTaskUpdated={handleTaskFormSuccess}

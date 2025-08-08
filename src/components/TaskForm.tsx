@@ -4,25 +4,30 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { addGuestTask, updateGuestTask } from 'app/lib/guest-storage';
-import { Task } from 'app/lib/definitions';
+// Importa el tipo `Task` directamente desde Prisma para evitar conflictos de tipos.
+import { Task } from '@prisma/client';
 
-// El tipo Task de las props puede tener fechas como string debido a la serialización.
-type InitialTask = Omit<Task, 'due_date' | 'createdAt' | 'updatedAt' | 'priority'> & {
-  due_date?: Date | string | null;
-  createdAt?: Date | string;
-  updatedAt?: Date | string;
-  priority: 'low' | 'medium' | 'high';
+// El tipo InitialTask se basa en el Task de Prisma, pero ajusta las propiedades para el formulario.
+// `id` ahora es un `number` para coincidir con la base de datos.
+type InitialTask = {
+  id: number;
+  title: string;
+  description?: string | null;
+  due_date?: Date | null;
+  priority: string;
+  is_completed: boolean;
 };
 
 interface TaskFormProps {
   onTaskCreated?: () => void;
   onTaskUpdated?: () => void;
-  initialTask?: InitialTask | null;
+  initialTask?: InitialTask | null; // Permite que initialTask sea null para el caso de crear una nueva tarea
 }
 
 export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: TaskFormProps) {
+  // Aseguramos que la inicialización de los estados maneje `null` y los valores correctos
   const [title, setTitle] = useState(initialTask?.title || '');
-  const [description, setDescription] = useState(initialTask?.description || '');
+  const [description, setDescription] = useState(initialTask?.description ?? '');
   const [dueDate, setDueDate] = useState(
     initialTask?.due_date ? new Date(initialTask.due_date).toISOString().split('T')[0] : ''
   );
@@ -37,7 +42,7 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
 
   useEffect(() => {
     setTitle(initialTask?.title || '');
-    setDescription(initialTask?.description || '');
+    setDescription(initialTask?.description ?? '');
     setDueDate(initialTask?.due_date ? new Date(initialTask.due_date).toISOString().split('T')[0] : '');
     setPriority(initialTask?.priority || 'medium');
     setIsCompleted(initialTask?.is_completed || false);
@@ -50,7 +55,6 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
     setError(null);
     setSuccess(null);
 
-    // No hacer nada si la sesión aún está cargando
     if (status === 'loading') {
       setError('Esperando autenticación...');
       return;
@@ -64,28 +68,22 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
     setIsLoading(true);
 
     // --- Lógica para el modo invitado ---
-    if (status === 'unauthenticated' || session?.user?.id?.startsWith('guest-')) {
+    if (status === 'unauthenticated' || userId?.startsWith('guest-')) {
       try {
         if (initialTask?.id) {
-          // Editando una tarea de invitado.
-          // Se reconstruye el objeto para asegurar la consistencia de tipos y evitar errores.
-          // El error principal era `parseInt(initialTask.id)`, que fallaría si el ID es un UUID.
           const updatedTaskData = {
-            id: typeof initialTask.id === 'string' ? parseInt(initialTask.id, 10) : initialTask.id,
+            ...initialTask,
             title: title.trim(),
             description: description ? description.trim() : null,
             due_date: dueDate ? new Date(dueDate) : null,
-            priority: priority as string,
+            priority: priority,
             is_completed: isCompleted,
             updatedAt: new Date(),
-            createdAt: initialTask.createdAt ? new Date(initialTask.createdAt) : new Date(),
-            userId: initialTask.userId || 'guest-user',
           };
-          updateGuestTask(updatedTaskData);
+          updateGuestTask(updatedTaskData as Task); // Asegúrate de que el tipo es compatible
           setSuccess('Tarea actualizada con éxito en modo invitado.');
           if (onTaskUpdated) onTaskUpdated();
         } else {
-          // Creando una nueva tarea de invitado
           const taskData = {
             title: title.trim(),
             description: description ? description.trim() : null,
@@ -95,7 +93,6 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
           };
           addGuestTask(taskData);
           setSuccess('Tarea creada con éxito en modo invitado.');
-          // Limpiar el formulario para una nueva tarea
           setTitle('');
           setDescription('');
           setDueDate('');
@@ -112,7 +109,7 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
       } finally {
         setIsLoading(false);
       }
-      return; // Detener la ejecución para el modo invitado
+      return;
     }
 
     // --- Lógica para el usuario autenticado ---
@@ -126,13 +123,14 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
       const method = initialTask ? 'PUT' : 'POST';
       const url = initialTask ? `/api/tasks/${initialTask.id}` : '/api/tasks';
 
+      // Asegúrate de que el userId se convierte a un número, ya que Prisma lo espera así.
       const taskData = {
         title: title.trim(),
         description: description ? description.trim() : null,
         due_date: dueDate ? new Date(dueDate).toISOString() : null,
         priority,
         is_completed: isCompleted,
-        userId: userId,
+        userId: parseInt(userId, 10), // Conversión de string a number
       };
 
       const response = await fetch(url, {

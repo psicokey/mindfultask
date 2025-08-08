@@ -14,6 +14,7 @@ import {
 } from 'chart.js';
 import { motion } from 'framer-motion';
 import { getGuestTasks } from 'app/lib/guest-storage';
+import { Task } from '@prisma/client';
 
 ChartJS.register(
   ArcElement,
@@ -22,32 +23,22 @@ ChartJS.register(
   Legend
 );
 
-interface Task {
-  id: number;
-  title: string;
-  description: string | null;
-  due_date: Date | null;
-  priority: 'low' | 'medium' | 'high';
-  is_completed: boolean;
+// Define la interfaz de propiedades para TaskSummary
+interface TaskSummaryProps {
   userId: string;
-  createdAt: Date;
-  updatedAt: Date;
+  refreshTrigger: number;
+  onEditTask: (task: Task) => void;
+  onTaskForm: boolean;
 }
 
-type RawTask = Omit<Task, "due_date" | "createdAt" | "updatedAt"> & {
-  due_date: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-const TaskSummary: React.FC = () => {
+// Ahora el componente acepta las props que le pasas desde DashboardClient
+const TaskSummary: React.FC<TaskSummaryProps> = ({ userId, refreshTrigger, onEditTask, onTaskForm }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'productivity' | 'wellbeing'>('productivity');
 
   const { data: session, status } = useSession();
-  const userId = session?.user?.id;
 
   const fetchTasksData = useCallback(async () => {
     if (status === 'loading') {
@@ -61,7 +52,8 @@ const TaskSummary: React.FC = () => {
       if (guestTasks) {
         const fetchedTasks: Task[] = guestTasks.map((task) => ({
           ...task,
-          priority: (task.priority as 'low' | 'medium' | 'high'),
+          // Corregir el tipo de 'priority' si es necesario, asumiendo que ya fue corregido en TaskForm
+          priority: task.priority as any,
           due_date: task.due_date ? new Date(task.due_date) : null,
           createdAt: new Date(task.createdAt),
           updatedAt: new Date(task.updatedAt),
@@ -109,7 +101,7 @@ const TaskSummary: React.FC = () => {
         throw new Error(errorData.message);
       }
 
-      const result: { tasks: RawTask[] } = await response.json();
+      const result: { tasks: any[] } = await response.json();
       const fetchedTasks: Task[] = result.tasks.map((task) => ({
         ...task,
         due_date: task.due_date ? new Date(task.due_date) : null,
@@ -127,7 +119,7 @@ const TaskSummary: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [userId, status, session]);
+  }, [userId, status, session, refreshTrigger]); // Añade refreshTrigger como dependencia
 
   useEffect(() => {
     fetchTasksData();
@@ -239,7 +231,7 @@ const TaskSummary: React.FC = () => {
             className={`px-4 py-3 text-sm font-medium ${activeTab === 'wellbeing' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
             type="button"
           >
-            Bienestar
+          Bienestar
           </button>
         </nav>
       </div>
