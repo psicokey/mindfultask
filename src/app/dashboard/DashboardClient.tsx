@@ -1,99 +1,110 @@
-// components/dashboard/DashboardClient.tsx
-'use client'; // ¡Importante! Este es un componente de cliente
+// src/app/dashboard/page.tsx
+'use client';
 
-import { useState } from 'react';
-import TaskSummary from 'app/components/dashboard/TaskSummary';
-import PomodoroTimer from 'app/components/dashboard/PomodoroTimer';
-import TaskForm from 'app/components/TaskForm';
-import { Task } from '@prisma/client';
-import Modal from 'app/components/Modal';
-import { Session } from 'next-auth';
-import TaskList from 'app/components/dashboard/TaskList';
+import { useEffect, useState } from 'react';
 
-interface DashboardClientProps {
-  user: Session['user'];
-}
+type Task = {
+  id: string;
+  title: string;
+  completed: boolean;
+};
 
-export default function DashboardClient({ user }: DashboardClientProps) {
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [taskRefreshTrigger, setTaskRefreshTrigger] = useState(0);
+export default function DashboardPage() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newTask, setNewTask] = useState('');
 
-  const handleOpenNewTaskModal = () => {
-    setSelectedTask(null);
-    setIsFormModalOpen(true);
+  // Cargar tareas
+  const fetchTasks = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/tasks');
+      if (!res.ok) throw new Error('Error al obtener tareas');
+      const data = await res.json();
+      setTasks(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleOpenEditTaskModal = (task: Task) => {
-    setSelectedTask(task);
-    setIsFormModalOpen(true);
+  // Crear tarea
+  const createTask = async () => {
+    if (!newTask.trim()) return;
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTask }),
+      });
+      if (!res.ok) throw new Error('Error al crear tarea');
+      setNewTask('');
+      fetchTasks();
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const handleCloseFormModal = () => {
-    setIsFormModalOpen(false);
-    setSelectedTask(null);
+  // Eliminar tarea
+  const deleteTask = async (id: string) => {
+    try {
+      const res = await fetch(`/api/tasks/${id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Error al eliminar tarea');
+      fetchTasks();
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const handleTaskFormSuccess = () => {
-    handleCloseFormModal();
-    setTaskRefreshTrigger(prev => prev + 1);
-  };
-
-  if (!user) {
-    return <p>Cargando usuario...</p>;
-  }
+  useEffect(() => {
+    fetchTasks();
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4 sm:p-6 lg:p-8">
-      <main className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <h1 className="text-4xl font-extrabold text-center mb-10 text-gray-800 dark:text-white">
-          Bienvenido a MindfulTask, {user.name || user.email}!
-        </h1>
+    <main className="p-6 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
 
-        {/* Ajuste del diseño de la cuadrícula a 3 columnas en pantallas grandes */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"> {/* Cambiado a lg:grid-cols-3 */}
-          {/* Columna para el Pomodoro Timer */}
-          <div className="md:col-span-1 lg:col-span-1"> {/* Ahora ocupa 1 de 3 columnas */}
-            <PomodoroTimer />
-          </div>
-
-          {/* Columna para la creación de tareas y TaskSummary */}
-          <div className="md:col-span-1 lg:col-span-1 flex flex-col space-y-8"> {/* Ahora ocupa 1 de 3 columnas */}
-            <button
-              onClick={handleOpenNewTaskModal}
-              className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:bg-green-700 dark:hover:bg-green-800"
-              type="button"
-            >
-              + Nueva Tarea
-            </button>
-
-            <TaskSummary
-              userId={parseInt(user.id, 10)}
-              onEditTask={handleOpenEditTaskModal}
-            />
-          </div>
-
-          {/* Columna para la TaskList */}
-          <div className="md:col-span-2 lg:col-span-1 flex flex-col space-y-8"> {/* Ahora ocupa 1 de 3 columnas */}
-            <TaskList
-              refreshTrigger={taskRefreshTrigger}
-              onEditTask={handleOpenEditTaskModal}
-            />
-          </div>
-        </div>
-      </main>
-
-      <Modal
-        isOpen={isFormModalOpen}
-        onClose={handleCloseFormModal}
-        title={selectedTask ? 'Editar Tarea' : 'Crear Nueva Tarea'}
-      >
-        <TaskForm
-          initialTask={selectedTask}
-          onTaskCreated={handleTaskFormSuccess}
-          onTaskUpdated={handleTaskFormSuccess}
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          placeholder="Nueva tarea"
+          value={newTask}
+          onChange={(e) => setNewTask(e.target.value)}
+          className="border rounded p-2 flex-1"
         />
-      </Modal>
-    </div>
+        <button
+          onClick={createTask}
+          className="bg-blue-500 text-white px-4 py-2 rounded"
+        >
+          Agregar
+        </button>
+      </div>
+
+      {loading ? (
+        <p>Cargando tareas...</p>
+      ) : tasks.length === 0 ? (
+        <p>No hay tareas</p>
+      ) : (
+        <ul className="space-y-2">
+          {tasks.map((task) => (
+            <li
+              key={task.id}
+              className="flex justify-between items-center border p-2 rounded"
+            >
+              <span>{task.title}</span>
+              <button
+                onClick={() => deleteTask(task.id)}
+                className="text-red-500 hover:underline"
+              >
+                Eliminar
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </main>
   );
 }
