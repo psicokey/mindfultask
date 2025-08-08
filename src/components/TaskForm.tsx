@@ -1,26 +1,23 @@
 // components/TaskForm.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useSession } from 'next-auth/react';
-// Define Task type locally to match your task structure
-interface Task {
-  id: string;
-  title: string;
-  description?: string | null;
+import { addGuestTask, updateGuestTask } from 'app/lib/guest-storage';
+import { Task } from 'app/lib/definitions';
+
+// El tipo Task de las props puede tener fechas como string debido a la serialización.
+type InitialTask = Omit<Task, 'due_date' | 'createdAt' | 'updatedAt' | 'priority'> & {
   due_date?: Date | string | null;
-  priority: 'low' | 'medium' | 'high';
-  is_completed: boolean;
   createdAt?: Date | string;
   updatedAt?: Date | string;
-  userId?: string;
-}
-import { addGuestTask, updateGuestTask } from 'app/lib/guest-storage';
+  priority: 'low' | 'medium' | 'high';
+};
 
 interface TaskFormProps {
   onTaskCreated?: () => void;
   onTaskUpdated?: () => void;
-  initialTask?: Task | null;
+  initialTask?: InitialTask | null;
 }
 
 export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: TaskFormProps) {
@@ -69,19 +66,21 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
     // --- Lógica para el modo invitado ---
     if (status === 'unauthenticated' || session?.user?.id?.startsWith('guest-')) {
       try {
-        if (initialTask) {
-          // Editando una tarea de invitado
-          const updatedTaskData = {
-            ...initialTask,
-            id: typeof initialTask.id === 'string' ? parseInt(initialTask.id, 10) : initialTask.id,
+        if (initialTask?.id) {
+          // Editando una tarea de invitado.
+          // Se reconstruye el objeto para asegurar la consistencia de tipos y evitar errores.
+          // El error principal era `parseInt(initialTask.id)`, que fallaría si el ID es un UUID.
+          const updatedTaskData: Task = {
+            id: initialTask.id,
             title: title.trim(),
             description: description ? description.trim() : null,
             due_date: dueDate ? new Date(dueDate) : null,
-            priority: priority,
+            priority: priority as 'low' | 'medium' | 'high',
             is_completed: isCompleted,
             updatedAt: new Date(),
-            userId: initialTask.userId ?? '', // Ensure userId is always a string
-            createdAt: initialTask.createdAt ? new Date(initialTask.createdAt) : new Date(), // Ensure createdAt exists
+            // Aseguramos que createdAt y userId existan, como lo requiere el tipo Task.
+            createdAt: initialTask.createdAt ? new Date(initialTask.createdAt) : new Date(),
+            userId: initialTask.userId || 'guest-user',
           };
           updateGuestTask(updatedTaskData);
           setSuccess('Tarea actualizada con éxito en modo invitado.');
@@ -131,7 +130,7 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
       const taskData = {
         title: title.trim(),
         description: description ? description.trim() : null,
-        dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+        due_date: dueDate ? new Date(dueDate).toISOString() : null,
         priority,
         is_completed: isCompleted,
         userId: userId,
