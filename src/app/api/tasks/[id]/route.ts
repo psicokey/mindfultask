@@ -1,8 +1,8 @@
 // app/api/tasks/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "app/lib/auth"; // Importa tus opciones de autenticación de NextAuth
-import * as prisma from "app/lib/prisma"; // Asegúrate de que la ruta sea correcta
+import { authOptions } from "app/lib/auth";
+import { prisma } from "app/lib/prisma";
 import { Prisma } from "@prisma/client"; // Importa Prisma para los tipos
 
 // Nota: La función GET para /api/tasks (sin ID específico) está en el mismo archivo
@@ -10,7 +10,10 @@ import { Prisma } from "@prisma/client"; // Importa Prisma para los tipos
 // Si tienes un archivo separado, asegúrate de que este archivo solo contenga
 // las operaciones para el ID específico (GET, PUT, DELETE).
 
-export async function GET({ params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   console.log(`API /api/tasks/${params.id} (GET) ha sido llamada.`);
 
   const session = await getServerSession(authOptions);
@@ -34,7 +37,7 @@ export async function GET({ params }: { params: { id: string } }) {
   }
 
   try {
-    const task = await prisma.prisma.task.findUnique({
+    const task = await prisma.task.findUnique({
       where: { id: taskId },
     });
 
@@ -110,7 +113,7 @@ export async function PUT(
     const body = await request.json();
     const { title, description, dueDate, priority, is_completed } = body;
 
-    const existingTask = await prisma.prisma.task.findUnique({
+    const existingTask = await prisma.task.findUnique({
       where: { id: taskId },
     });
 
@@ -145,7 +148,7 @@ export async function PUT(
       dataToUpdate.due_date = null;
     }
 
-    const updatedTask = await prisma.prisma.task.update({
+    const updatedTask = await prisma.task.update({
       where: { id: taskId },
       data: dataToUpdate,
     });
@@ -206,7 +209,7 @@ export async function DELETE(
   }
 
   try {
-    const existingTask = await prisma.prisma.task.findUnique({
+    const existingTask = await prisma.task.findUnique({
       where: { id: taskId },
     });
 
@@ -228,7 +231,7 @@ export async function DELETE(
       );
     }
 
-    await prisma.prisma.task.delete({
+    await prisma.task.delete({
       where: { id: taskId },
     });
 
