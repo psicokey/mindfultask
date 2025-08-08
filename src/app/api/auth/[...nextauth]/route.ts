@@ -4,16 +4,16 @@
 import NextAuth, { AuthOptions, User } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google"; // Importa el proveedor de Google
-import prisma from "app/lib/prisma"; // Asegúrate de que la ruta sea correcta, se cambió a @/lib/prisma
+import * as prisma from "app/lib/prisma"; // Asegúrate de que la ruta sea correcta, se cambió a @/lib/prisma
 import bcrypt from "bcryptjs";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 import { User as PrismaUser } from "@prisma/client"; // Importa el tipo User de Prisma
 
 // La función authenticateUser ahora devuelve un tipo User de Prisma (o el que uses)
 // Asegúrate de que tu modelo 'user' en la base de datos incluya id, name, email, password y role.
 async function getUser(email: string): Promise<PrismaUser | null> {
   try {
-    const user = await prisma.user.findUnique({
+    const user = await prisma.prisma.user.findUnique({
       where: { email },
     });
     return user;
@@ -32,17 +32,16 @@ export const authOptions: AuthOptions = {
         password: { label: "Password", type: "password" },
         guest: { label: "Guest Login", type: "boolean", optional: true },
       },
-      
+
       // El tipo 'User' aquí proviene de next-auth
       async authorize(credentials): Promise<User | null> {
-        
         if (credentials?.guest) {
-          console.log('Attempting guest login...');
+          console.log("Attempting guest login...");
           // Genera un ID único para el invitado
           const guestId = `guest-${uuidv4()}`;
           return {
             id: guestId,
-            name: 'Invitado',
+            name: "Invitado",
             email: `${guestId}@example.com`, // Email ficticio
             image: null,
           };
@@ -65,7 +64,7 @@ export const authOptions: AuthOptions = {
         if (!isValidPassword) {
           return null;
         }
-        
+
         // Retorna el objeto usuario que cumple con el tipo 'User' de next-auth
         // Incluye los campos personalizados que extendimos.
         return {

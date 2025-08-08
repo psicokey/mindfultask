@@ -29,12 +29,20 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError(result.error);
-      } else {
+        // Traducir mensajes de error genéricos a algo más amigable para el usuario.
+        if (result.error === 'CredentialsSignin') {
+          setError('Email o contraseña incorrectos. Por favor, inténtalo de nuevo.');
+        } else {
+          setError('Ocurrió un error inesperado. Por favor, inténtalo más tarde.');
+        }
+        console.error('Login Error:', result.error);
+      } else if (result?.ok) {
         router.push(callbackUrl);
       }
-    } catch (err: any) {
-      setError(err.message || 'Ocurrió un error inesperado al iniciar sesión.');
+    } catch (err: unknown) {
+      // Usamos `unknown` para un manejo de errores más seguro.
+      console.error('Submit Error:', err);
+      setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido.');
     } finally {
       setIsLoading(false);
     }
@@ -50,12 +58,19 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError(result.error);
-      } else {
+        // Mensajes de error más claros también para el login de invitado.
+        if (result.error === 'CredentialsSignin') {
+          setError('No se pudo iniciar sesión como invitado. Inténtalo de nuevo.');
+        } else {
+          setError('Ocurrió un error inesperado. Por favor, inténtalo más tarde.');
+        }
+        console.error('Guest Login Error:', result.error);
+      } else if (result?.ok) {
         router.push(callbackUrl);
       }
-    } catch (err: any) {
-      setError(err.message || 'Ocurrió un error inesperado al iniciar sesión como invitado.');
+    } catch (err: unknown) {
+      console.error('Guest Submit Error:', err);
+      setError(err instanceof Error ? err.message : 'Ocurrió un error desconocido.');
     } finally {
       setIsLoading(false);
     }

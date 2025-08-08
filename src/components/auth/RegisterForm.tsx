@@ -28,7 +28,8 @@ export default function RegisterForm() {
         setError(data.message || 'Error en el registro');
       }
     } catch (err) {
-      setError('Error en la conexión');
+      console.error('Registration Error:', err);
+      setError('Ocurrió un error al registrar. Por favor, inténtalo de nuevo.');
     }
   };
 

@@ -24,7 +24,7 @@ const DashboardHeader = () => {
   const [mounted, setMounted] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(3); // Ejemplo, puedes obtenerlo de tu API
+  const [unreadNotifications] = useState(3); // Ejemplo, puedes obtenerlo de tu API
 
   // Efecto para asegurar que el tema está montado
   useEffect(() => {

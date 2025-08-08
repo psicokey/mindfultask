@@ -5,8 +5,6 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FaUser, FaEnvelope, FaLock, FaArrowRight } from 'react-icons/fa';
-import { FcGoogle } from 'react-icons/fc';
-import { FiGithub } from 'react-icons/fi';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({

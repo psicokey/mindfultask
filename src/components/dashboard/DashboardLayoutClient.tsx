@@ -1,7 +1,6 @@
 // components/dashboard/DashboardLayoutClient.tsx
 'use client';
 
-import { useState } from 'react';
 import TaskForm from 'app/components/TaskForm';
 import Modal from 'app/components/Modal';
 import PomodoroTimer from 'app/components/dashboard/PomodoroTimer';
@@ -31,7 +30,6 @@ export default function DashboardLayoutClient({ user, children }: DashboardLayou
 
 function DashboardLayoutContent({ user, children }: DashboardLayoutClientProps) {
   const { isFormModalOpen, selectedTask, handleCloseFormModal, handleTaskFormSuccess } = useDashboardContext();
-  const router = useRouter();
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: '/login' }); // Redirige al login después de cerrar sesión

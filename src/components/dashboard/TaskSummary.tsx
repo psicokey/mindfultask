@@ -3,7 +3,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import Link from 'next/link';
 import { FaTasks, FaCheckCircle, FaRunning, FaRegClock, FaRegCalendarAlt, FaRegLightbulb } from 'react-icons/fa';
 import { Pie } from 'react-chartjs-2';
 import {
@@ -37,12 +36,14 @@ interface Task {
 }
 
 interface TaskSummaryProps {
-  // No se necesitan props, los handlers vienen del contexto
+  tasks: Task[];
+  isLoading: boolean;
+  error: string | null;
+  onEditTask: (task: Task) => void; // Callback para editar tarea
 }
 
 const TaskSummary: React.FC<TaskSummaryProps> = () => {
-  const { handleOpenEditTaskModal } = useDashboardContext();
-
+  
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +62,17 @@ const TaskSummary: React.FC<TaskSummaryProps> = () => {
     if (status === 'unauthenticated' || session?.user?.id?.startsWith('guest-')) {
       console.log('TaskSummary (Guest): fetching tasks from localStorage');
       const guestTasks = getGuestTasks();
-      setTasks(guestTasks);
+      if (guestTasks) {
+        const fetchedTasks: Task[] = guestTasks.map((task: any) => ({
+          ...task,
+          due_date: task.due_date ? new Date(task.due_date) : null,
+          createdAt: new Date(task.createdAt),
+          updatedAt: new Date(task.updatedAt),
+        }));
+        setTasks(fetchedTasks);
+      } else {
+        setTasks([]);
+      }
       setIsLoading(false);
       return;
     }

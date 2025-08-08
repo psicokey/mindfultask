@@ -40,7 +40,7 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
 
   // Estados para la paginación
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(10);
   const [totalTasks, setTotalTasks] = useState(0);
 
   const { data: session, status } = useSession();
@@ -142,9 +142,14 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
       const result = await response.json();
       setTasks(result.tasks || []);
       setTotalTasks(result.totalTasks || 0);
-    } catch (err: any) {
-      console.error('Error al obtener tareas:', err);
-      setError(err.message || 'Ocurrió un error inesperado al cargar las tareas.');
+    } 
+    catch (err) {
+      console.error('Error al cargar las tareas:', err);
+      if (err instanceof Error) {
+        setError(err.message || 'Ocurrió un error al cargar las tareas.');
+      } else {
+        setError('Ocurrió un error al cargar las tareas.');
+      }
       setTasks([]);
       setTotalTasks(0);
     } finally {
