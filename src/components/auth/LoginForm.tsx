@@ -51,7 +51,7 @@ export default function LoginForm() {
         router.push(callbackUrl);
       }
     } catch (err) {
-      setAuthError('Ocurrió un error inesperado. Inténtalo más tarde.');
+      setAuthError('Ocurrió un error inesperado. Inténtalo más tarde.' + (err instanceof Error ? `: ${err.message}` : ''));
     } finally {
       setIsLoading(false);
     }
