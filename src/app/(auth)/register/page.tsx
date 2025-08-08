@@ -90,12 +90,15 @@ export default function RegisterPage() {
           form: data.message || 'Error en el registro'
         }));
       }
-    } catch (_) {
+    } 
+    catch (error) {
+      console.error('Error al registrar:', error);
       setErrors(prev => ({
         ...prev,
-        form: 'Error de conexión. Intenta nuevamente.'
+        form: 'Error en el registro. Inténtalo de nuevo más tarde.'
       }));
-    } finally {
+    }
+    finally {
       setIsLoading(false);
     }
   };

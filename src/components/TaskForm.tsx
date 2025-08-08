@@ -1,7 +1,7 @@
 // components/TaskForm.tsx
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { addGuestTask, updateGuestTask } from 'app/lib/guest-storage';
 import { Task } from 'app/lib/definitions';
