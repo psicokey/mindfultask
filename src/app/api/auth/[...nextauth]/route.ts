@@ -136,6 +136,6 @@ export { handler as GET, handler as POST };
 
 // Exportaciones para uso en Server Components (App Router)
 // y otras utilidades que necesiten acceder a la sesión o funciones de auth
-export const auth = NextAuth(authOptions).auth;
-export const signIn = NextAuth(authOptions).signIn;
-export const signOut = NextAuth(authOptions).signOut;
+//export const auth = NextAuth(authOptions).auth;
+//export const signIn = NextAuth(authOptions).signIn;
+//export const signOut = NextAuth(authOptions).signOut;
