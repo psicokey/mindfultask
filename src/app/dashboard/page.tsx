@@ -1,9 +1,10 @@
 // app/dashboard/page.tsx
 'use client'; // Esta página necesita ser un componente de cliente para usar useDashboardContext
 
-import TaskSummary from 'app/components/dashboard/TaskSummary';
 import TaskList from 'app/components/dashboard/TaskList';
 import { useDashboardContext } from 'app/components/dashboard/DashboardContext';
+import TaskSummary from 'app/components/dashboard/TaskSummary';
+import DashboardClient from './DashboardClient';
 
 
 export default function DashboardPage() {
@@ -21,14 +22,18 @@ export default function DashboardPage() {
       </button>
 
       {/* Componente TaskSummary */}
-      {/* TaskSummary ahora obtiene onEditTask del contexto */}
-      <TaskSummary />
+      <TaskSummary
+        userId={''} // Aquí deberías pasar el ID del usuario actual
+        refreshTrigger={taskRefreshTrigger}
+        onEditTask={handleOpenEditTaskModal}
+        onTaskForm={false} // Si necesitas abrir el formulario desde TaskSummary
+      />
 
       {/* Componente TaskList */}
       <TaskList
-        refreshTrigger={taskRefreshTrigger}
-        onEditTask={handleOpenEditTaskModal} // Pasa la función para editar tareas
-      />
+                    refreshTrigger={taskRefreshTrigger}
+                    onEditTask={handleOpenEditTaskModal}
+                  />
     </>
   );
 }

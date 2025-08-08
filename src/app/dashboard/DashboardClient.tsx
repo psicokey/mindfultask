@@ -1,6 +1,7 @@
 // components/dashboard/DashboardClient.tsx
 'use client';
 
+import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 import TaskSummary from 'app/components/dashboard/TaskSummary'; // Asegúrate de que las rutas son correctas
 import PomodoroTimer from 'app/components/dashboard/PomodoroTimer';
@@ -19,7 +20,11 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskRefreshTrigger, setTaskRefreshTrigger] = useState(0);
-
+  const { data: session, status } = useSession();
+  const userId = user?.id || session?.user?.id;
+  if (!userId) {
+    return <p>Cargando usuario...</p>;
+  } 
   const handleOpenNewTaskModal = () => {
     setSelectedTask(null);
     setIsNewTaskModalOpen(true);
@@ -67,10 +72,11 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             </button>
 
             {/* Asegúrate de que TaskSummary reciba las props necesarias */}
-            <TaskSummary userId={user.id}
+            <TaskSummary userId={userId}
               refreshTrigger={taskRefreshTrigger}
               onEditTask={handleOpenEditTaskModal}
-              onTaskForm />
+              onTaskForm={false}
+            />
 
             <TaskList
               refreshTrigger={taskRefreshTrigger}

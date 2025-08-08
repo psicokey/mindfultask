@@ -28,11 +28,11 @@ interface TaskSummaryProps {
   userId: string;
   refreshTrigger: number;
   onEditTask: (task: Task) => void;
-  onTaskForm: boolean;
+  onTaskForm: boolean; // Si necesitas abrir el formulario desde TaskSummary
 }
 
 // Ahora el componente acepta las props que le pasas desde DashboardClient
-const TaskSummary: React.FC<TaskSummaryProps> = ({ userId, refreshTrigger}) => {
+const TaskSummary: React.FC<TaskSummaryProps> = ({ userId }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +119,7 @@ const TaskSummary: React.FC<TaskSummaryProps> = ({ userId, refreshTrigger}) => {
     } finally {
       setIsLoading(false);
     }
-  }, [userId, status, session, refreshTrigger]); // Añade refreshTrigger como dependencia
+  }, [userId, status, session]);
 
   useEffect(() => {
     fetchTasksData();
