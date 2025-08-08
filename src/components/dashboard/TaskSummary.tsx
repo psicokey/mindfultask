@@ -13,7 +13,6 @@ import {
   Legend,
 } from 'chart.js';
 import { motion } from 'framer-motion';
-import { useDashboardContext } from 'app/components/dashboard/DashboardContext';
 import { getGuestTasks } from 'app/lib/guest-storage'; // Importar la función para invitados
 
 ChartJS.register(
