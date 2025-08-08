@@ -88,7 +88,7 @@ export const authOptions: AuthOptions = {
     maxAge: 2 * 60 * 60, // 2 horas
   },
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       // 'user' estará presente en el primer inicio de sesión o después de un refresh
       if (user) {
         token.id = user.id;

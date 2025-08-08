@@ -8,7 +8,6 @@ import { Session } from 'next-auth';
 import { DashboardProvider, useDashboardContext } from 'app/components/dashboard/DashboardContext';
 import Link from 'next/link'; // Importar Link para la navegación
 import { signOut } from 'next-auth/react'; // Importar signOut para cerrar sesión
-import { useRouter } from 'next/navigation'; // Importar useRouter para redirección después de cerrar sesión
 import ThemeSwitcher from '../ThemeSwitcher';
 
 interface DashboardLayoutClientProps {

@@ -70,15 +70,14 @@ export default function TaskForm({ onTaskCreated, onTaskUpdated, initialTask }: 
           // Editando una tarea de invitado.
           // Se reconstruye el objeto para asegurar la consistencia de tipos y evitar errores.
           // El error principal era `parseInt(initialTask.id)`, que fallaría si el ID es un UUID.
-          const updatedTaskData: Task = {
-            id: initialTask.id,
+          const updatedTaskData = {
+            id: typeof initialTask.id === 'string' ? parseInt(initialTask.id, 10) : initialTask.id,
             title: title.trim(),
             description: description ? description.trim() : null,
             due_date: dueDate ? new Date(dueDate) : null,
-            priority: priority as 'low' | 'medium' | 'high',
+            priority: priority as string,
             is_completed: isCompleted,
             updatedAt: new Date(),
-            // Aseguramos que createdAt y userId existan, como lo requiere el tipo Task.
             createdAt: initialTask.createdAt ? new Date(initialTask.createdAt) : new Date(),
             userId: initialTask.userId || 'guest-user',
           };

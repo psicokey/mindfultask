@@ -68,7 +68,7 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
     }
 
     // Si la sesión ya cargó y no hay userId (usuario no autenticado), redirigir
-    if (status === 'unauthenticated' || session?.user?.id?.startsWith('guest-')) {
+    if (status === 'unauthenticated' || userId?.startsWith('guest-')) {
       // Modo Invitado: Cargar tareas desde localStorage
       console.log('Guest mode: fetching tasks from localStorage');
       const guestTasks = getGuestTasks();
@@ -261,7 +261,7 @@ export default function TaskList({ refreshTrigger, onEditTask = () => {} }: Task
     const buttons = [];
     const maxButtons = 5; // Puedes ajustar este número
     let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
-    let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+    const endPage = Math.min(totalPages, startPage + maxButtons - 1);
 
     if (endPage - startPage + 1 < maxButtons) {
       startPage = Math.max(1, endPage - maxButtons + 1);

@@ -90,7 +90,7 @@ export default function RegisterPage() {
           form: data.message || 'Error en el registro'
         }));
       }
-    } catch (error) {
+    } catch (_) {
       setErrors(prev => ({
         ...prev,
         form: 'Error de conexión. Intenta nuevamente.'

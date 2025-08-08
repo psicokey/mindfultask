@@ -289,7 +289,7 @@ export default function PomodoroTimer() {
         setTotalBreakTimeAccumulated(0);
       }
     }
-  }, []);
+  }, [ workTime ]);
 
   // Efecto para guardar el estado en localStorage cada vez que cambian los estados relevantes
   useEffect(() => {

@@ -34,6 +34,14 @@ interface Task {
   updatedAt: Date;
 }
 
+// Tipo para tareas con fechas como strings (desde API o localStorage)
+type RawTask = Omit<Task, "due_date" | "createdAt" | "updatedAt"> & {
+  due_date: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+
 interface TaskSummaryProps {
   tasks: Task[];
   isLoading: boolean;
@@ -62,8 +70,9 @@ const TaskSummary: React.FC<TaskSummaryProps> = () => {
       console.log('TaskSummary (Guest): fetching tasks from localStorage');
       const guestTasks = getGuestTasks();
       if (guestTasks) {
-        const fetchedTasks: Task[] = guestTasks.map((task: any) => ({
+        const fetchedTasks: Task[] = guestTasks.map((task) => ({
           ...task,
+          priority: (task.priority as 'low' | 'medium' | 'high'),
           due_date: task.due_date ? new Date(task.due_date) : null,
           createdAt: new Date(task.createdAt),
           updatedAt: new Date(task.updatedAt),
@@ -110,17 +119,21 @@ const TaskSummary: React.FC<TaskSummaryProps> = () => {
         throw new Error(errorData.message);
       }
 
-      const result = await response.json();
-      const fetchedTasks: Task[] = result.tasks.map((task: any) => ({
+      const result: { tasks: RawTask[] } = await response.json();
+      const fetchedTasks: Task[] = result.tasks.map((task: RawTask) => ({
         ...task,
         due_date: task.due_date ? new Date(task.due_date) : null,
         createdAt: new Date(task.createdAt),
         updatedAt: new Date(task.updatedAt),
       }));
       setTasks(fetchedTasks);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching tasks:', err);
-      setError(err.message || 'Ocurrió un error inesperado al cargar las tareas.');
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Ocurrió un error inesperado al cargar las tareas.');
+      }
       setTasks([]);
     } finally {
       setIsLoading(false);

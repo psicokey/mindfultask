@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "app/app/api/auth/[...nextauth]/route"; // Importa tus opciones de autenticación de NextAuth
 import * as prisma from "app/lib/prisma"; // Asegúrate de que la ruta sea correcta
+import { Prisma } from "@prisma/client"; // Importa Prisma para los tipos
 
 // Nota: La función GET para /api/tasks (sin ID específico) está en el mismo archivo
 // si no tienes un archivo separado para /api/tasks/route.ts.
@@ -131,7 +132,7 @@ export async function PUT(
       );
     }
 
-    const dataToUpdate: any = {
+    const dataToUpdate: Prisma.TaskUpdateInput = {
       title: title?.trim(),
       description: description ? description.trim() : null,
       priority: priority,
